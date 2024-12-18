@@ -177,9 +177,9 @@ def nr_resampled_horizon(path_to_file,quantity=None,delta_tbyM=None,relaxtime=No
     
     return time_resamp, A_resamp, B_resamp
 
-def nr_resampled_horizon_with_sxs(simulation_label,sampling=None):
+def nr_resampled_horizon_with_sxs(simulation_label='SXS:BBH:0001',sampling=None):
 
-    simulation = sxs.load(f"SXS:BBH:{simulation_label}")
+    simulation = sxs.load(simulation_label)
     horizons = simulation.horizons
     metadata = simulation.metadata
     reference_time = metadata.reference_time
@@ -209,3 +209,77 @@ def nr_resampled_horizon_with_sxs(simulation_label,sampling=None):
     mass_B_even = flinB(time_seconds_even)
 
     return time_seconds_even, mass_A_even, mass_B_even
+
+
+def nr_resampled_geo_with_sxs(simulation_label='SXS:BBH:0001',mode=[2,2],sampling=None,delta_t=None,junk_remove=True,merger_cutoff=False):
+    '''
+    simulation_label => just the 4-digit sxs label. 
+    mode = an array of two elements: [l,m]
+    sampling => if none is specified, the resampling will be with the coarsest delta_t (sometimes it's enough). Otherwise, you can pass the string 'fine' to resample with the finest delta_t.
+    delta_t => you can choose delta_t of your own (optional)
+    junk_remove => trim the starting part of the waveform up to the reference time to remove junk.
+    merger_cutoff => cutoff the waveform at the common horizon time.
+
+    Returns
+         resampled (l,m) mode: time, real and -imag parts.
+    '''
+    simulation = sxs.load(simulation_label)
+    ell = mode[0]
+    em = mode[1]
+    n = ell+ em
+    
+    for i in range(2,ell): 
+        n += 2*i+1
+        
+    h = simulation.h[:,n]  #for the (l,m) mode
+    metadata = simulation.metadata
+    reference_time = metadata.reference_time
+    merger_time = metadata.common_horizon_time
+    
+    reference_index = np.where(h.t>=reference_time)[0][0]
+    
+    if junk_remove and not merger_cutoff:
+        strainp = h.real[reference_index:]
+        strainc = -h.imag[reference_index:]
+        time = h.t[reference_index:]
+    elif merger_cutoff and junk_remove:
+        merger_index = np.where(h.t>=merger_time)[0][0]
+        strainp = h.real[reference_index:merger_index]
+        strainc = -h.imag[reference_index:merger_index]
+        time = h.t[reference_index:merger_index]
+    elif merger_cutoff and not junk_remove:
+        merger_index = np.where(h.t>=merger_time)[0][0]
+        strainp = h.real[:merger_index]
+        strainc = -h.imag[:merger_index]
+        time = h.t[:merger_index]
+    else:
+        strainp = h.real
+        strainc = -h.imag
+        time = h.t
+        
+    flinp = interp1d(time,strainp,kind='cubic')
+    flinc = interp1d(time,strainc,kind='cubic')
+
+
+    # finding maximum and minimum time spacing ---------
+    deltat=[]
+    for i in range(len(time)-1):
+        deltat.append(time[i+1]-time[i])
+
+    deltat.append(deltat[-1])
+
+    coarse_dt, fine_dt = max(deltat), min(deltat)
+    #--------------------------------------------------
+
+    if sampling == 'fine': 
+        dt = fine_dt
+    else: dt = coarse_dt
+        
+    if delta_t is not None: dt = delta_t
+
+    time_resamp = np.arange(time[0],time[-1],dt)
+    strainp_resamp = flinp(time_resamp)
+    strainc_resamp = flinc(time_resamp)
+
+    return time_resamp, strainp_resamp, strainc_resamp
+  
