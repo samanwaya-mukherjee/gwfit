@@ -184,6 +184,13 @@ def f_MECO(m1,m2,chi1,chi2):
     
     return fmeco
 
+def Mf_peak_td_fit(m1,m2):
+    eta = m1*m2/(m1+m2)**2
+    W0 = 0.3578
+    W2 = -0.1211
+    W4 = 0.0432
+    return (1./(2*np.pi))*(W0 + W2*(1-4*eta) + W4*(1-4*eta)**2)
+
 def f_phi_end(m1,m2,chi1,chi2):
 
 
