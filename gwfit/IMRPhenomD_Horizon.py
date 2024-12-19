@@ -61,26 +61,23 @@ def amp_phase_PhenomD_Horizon(m1,m2,chi1,chi2,DL,tc,phic,iota,f_ini=None,f_final
     if delta_f is None: raise Exception('Specify delta_f')
     if f_ini is None: raise Exception('Specify f_ini')
 
-    f_ini_D = (Mf2phase - 0.001)/M
-    f_final_htf2 = (Mf2phase + 0.001)/M
-    
     if f_final is None:
         hpd, hcd = waveform.get_fd_waveform(approximant='IMRPhenomD',
                              mass1=m1, mass2=m2, spin1z=chi1, spin2z=chi2, distance = DL, 
-                                  delta_f=delta_f, f_lower = f_ini_D, f_final = 0)
+                                  delta_f=delta_f, f_lower = f_ini, f_final = 0)
     else:
         hpd, hcd = waveform.get_fd_waveform(approximant='IMRPhenomD',
                              mass1=m1, mass2=m2, spin1z=chi1, spin2z=chi2, distance = DL, 
-                                  delta_f=delta_f, f_lower = f_ini_D, f_final = f_final)
+                                  delta_f=delta_f, f_lower = f_ini, f_final = f_final)
     
-    indexini =np.where(hpd.sample_frequencies>f_ini_D)[0][0]
+    indexini =np.where(hpd.sample_frequencies>f_ini)[0][0]
     
     hplusD = hpd[indexini:]
     fpatch = np.zeros(indexini)
-    f = np.arange(f_ini,f_final_htf2,delta_f)
+    f = hpd.sample_frequencies[indexini:]
     
     amphtf2,phase_htf2 = insp.HTF2(f,m1,m2,chi1,chi2,DL,tc,phic,iota,amp_phase_only=True,same_as_PhenomD=0)
-    ampTH = insp.ampTH(f,m1,m2,chi1,chi2,DL,1,1)
+    ampTH = insp.ampTH(f,m1,m2,chi1,chi2,DL)
     
     ## amplitude model ------------------
     
