@@ -61,9 +61,6 @@ def amp_phase_PhenomD_Horizon(m1,m2,chi1,chi2,DL,tc,phic,iota,f_ini=None,f_final
     if delta_f is None: raise Exception('Specify delta_f')
     if f_ini is None: raise Exception('Specify f_ini')
 
-    sft='{}/{}'.format(path_to_sigma_rho,lambdasigma_file)
-    sigmadata=np.genfromtxt(sft)
-
     f_ini_D = (Mf2phase - 0.001)/M
     f_final_htf2 = (Mf2phase + 0.001)/M
     
