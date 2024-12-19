@@ -33,7 +33,7 @@ def dmdt_new(f,m1,m2,chi1,chi2):
     
     Ms = m1+m2
     eta = (m1*m2)/Ms**2
-    v = (np.pi*Ms*urel.MTsun*f)**(1./3.)
+    v = (np.pi*Ms*MTsun*f)**(1./3.)
     
     k1 = np.sqrt(1.-chi1**2)
     k2 = np.sqrt(1.-chi2**2)
@@ -46,15 +46,15 @@ def dmdt_new(f,m1,m2,chi1,chi2):
     B21 = B2(3.,2.*chi1/k1)
     B22 = B2(3.,2.*chi2/k2)
         
-    omega_H1 = chi1/(2.*m1*urel.MTsun*(1.+k1)) ## angular velocity of horizon for BH 1
-    omega_H2 = chi2/(2.*m2*urel.MTsun*(1.+k2)) ## angular velocity of horizon for BH 2
+    omega_H1 = chi1/(2.*m1*MTsun*(1.+k1)) ## angular velocity of horizon for BH 1
+    omega_H2 = chi2/(2.*m2*MTsun*(1.+k2)) ## angular velocity of horizon for BH 2
     
-    omega1 = (v**3/(Ms*urel.MTsun))*(1.-eta*v**2 + (1./2.)*(chi_tilde-chi_bar1)*v**3)
-    omega2 = (v**3/(Ms*urel.MTsun))*(1.-eta*v**2 + (1./2.)*(chi_tilde-chi_bar2)*v**3)
+    omega1 = (v**3/(Ms*MTsun))*(1.-eta*v**2 + (1./2.)*(chi_tilde-chi_bar1)*v**3)
+    omega2 = (v**3/(Ms*MTsun))*(1.-eta*v**2 + (1./2.)*(chi_tilde-chi_bar2)*v**3)
     
-    C_x1 = -(16./5.)*(m1*urel.MTsun)**2*(X1**2)*eta**2*(1. + k1)*v**12*(1. + 3.*chi1**2 + (1./4.)*(3.*(2. + chi1**2) + 2*X1*(1. + 3.*chi1**2)*(2. + 3.*X1))*v**2 + v**3*((1./2.)*(-4. + 3.*chi1**2)*chi2 - 2.*X1*(1. + 3.*chi1**2)*(X1*(chi1+chi2) + 4*B21) + X1*(-(2./3.)*(23. + 30.*k1)*chi1 + (7. - 12.*k1)*chi1**3 + 4.*chi2 + (9.*chi1**2*chi2/2.))))
+    C_x1 = -(16./5.)*(m1*MTsun)**2*(X1**2)*eta**2*(1. + k1)*v**12*(1. + 3.*chi1**2 + (1./4.)*(3.*(2. + chi1**2) + 2*X1*(1. + 3.*chi1**2)*(2. + 3.*X1))*v**2 + v**3*((1./2.)*(-4. + 3.*chi1**2)*chi2 - 2.*X1*(1. + 3.*chi1**2)*(X1*(chi1+chi2) + 4*B21) + X1*(-(2./3.)*(23. + 30.*k1)*chi1 + (7. - 12.*k1)*chi1**3 + 4.*chi2 + (9.*chi1**2*chi2/2.))))
     
-    C_x2 = -(16./5.)*(m2*urel.MTsun)**2*(X2**2)*eta**2*(1. + k2)*v**12*(1. + 3.*chi2**2 + (1./4.)*(3.*(2. + chi2**2) + 2*X2*(1. + 3.*chi2**2)*(2. + 3.*X2))*v**2 + v**3*((1./2.)*(-4. + 3.*chi2**2)*chi1 - 2.*X2*(1. + 3.*chi2**2)*(X2*(chi1+chi2) + 4*B22) + X2*(-(2./3.)*(23. + 30.*k2)*chi2 + (7. - 12.*k2)*chi2**3 + 4.*chi1 + (9.*chi2**2*chi1/2.))))
+    C_x2 = -(16./5.)*(m2*MTsun)**2*(X2**2)*eta**2*(1. + k2)*v**12*(1. + 3.*chi2**2 + (1./4.)*(3.*(2. + chi2**2) + 2*X2*(1. + 3.*chi2**2)*(2. + 3.*X2))*v**2 + v**3*((1./2.)*(-4. + 3.*chi2**2)*chi1 - 2.*X2*(1. + 3.*chi2**2)*(X2*(chi1+chi2) + 4*B22) + X2*(-(2./3.)*(23. + 30.*k2)*chi2 + (7. - 12.*k2)*chi2**3 + 4.*chi1 + (9.*chi2**2*chi1/2.))))
     
     dm1dt = omega1*(omega_H1 - omega1)*C_x1
     dm2dt = omega2*(omega_H2 - omega2)*C_x2
