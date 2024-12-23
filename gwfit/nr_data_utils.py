@@ -177,7 +177,7 @@ def nr_resampled_horizon(path_to_file,quantity=None,delta_tbyM=None,relaxtime=No
     
     return time_resamp, A_resamp, B_resamp
 
-def nr_resampled_horizon_with_sxs(simulation_label='SXS:BBH:0001',sampling=None):
+def nr_resampled_horizon_with_sxs(simulation_label='SXS:BBH:0001',sampling='coarse',delta_t=None):
 
     simulation = sxs.load(simulation_label)
     horizons = simulation.horizons
@@ -202,6 +202,7 @@ def nr_resampled_horizon_with_sxs(simulation_label='SXS:BBH:0001',sampling=None)
     if sampling is None: raise Exception('Mention whether sampling=coarse or sampling=fine')
     if sampling =='coarse': delta_t = np.max(delta_t_default)
     if sampling =='fine': delta_t = np.min(delta_t_default)
+    if delta_t: delta_t = delta_t
 
     time_seconds_even = np.arange(time_seconds[0],time_seconds[-1],delta_t)
 
@@ -282,4 +283,26 @@ def nr_resampled_geo_with_sxs(simulation_label='SXS:BBH:0001',mode=[2,2],samplin
     strainc_resamp = flinc(time_resamp)
 
     return time_resamp, strainp_resamp, strainc_resamp
+
+def gw_flux(simulation_label='SXS:BBH:0001',merger_cutoff=True,delta_t=None,ell_max=8):
+    i=0
+    M = urel.MTsun
+    for ell in range(2,ell_max+1):
+        for em in range(-ell,ell+1):
+            t, hlm_real, hlm_imag = nr_resampled_geo_with_sxs(simulation_label=simulation_label,mode=[ell,em],merger_cutoff=merger_cutoff,delta_t=delta_t)
+            if i==0: 
+                gw_flux = np.zeros_like(t)
+                t_nr = t
+            hlm_real_dot = urel.dydx(t*M,hlm_real)
+            hlm_imag_dot = urel.dydx(t*M,hlm_imag)
+            
+            hlm_real_dot *= M
+            hlm_imag_dot *= M
+            
+            gw_flux += np.abs(hlm_real_dot**2+hlm_imag_dot**2)
+            i += 1
+        
+    gw_flux *= (1./(16.*np.pi))
+    
+    return t_nr, gw_flux
   
