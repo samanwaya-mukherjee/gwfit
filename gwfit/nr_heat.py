@@ -73,50 +73,50 @@ def psiTH_from_nr(f,m1,m2,intermediate=0,Mf_transition1=0.022,Mf_transition2=0.0
 
 def imr_tidal_heating_approximant(f,m1,m2,Mf_transition1=0.022,Mf_transition2=0.032):
 	
-    psiTH_pn = insp.psiTH_new(f,m1,m2,0,0) #spins are zero
-	
+	psiTH_pn = insp.psiTH_new(f,m1,m2,0,0) #spins are zero
+
 	psiTH_intermediate = psiTH_from_nr(f,m1,m2,intermediate=1,Mf_transition1=Mf_transition1,Mf_transition2=Mf_transition2)
 
 	psiTH_nr = psiTH_from_nr(f,m1,m2)
-    
-    Mf = (m1+m2)*urel.MTsun*f
-        
-    psi_prime_nr = urel.dydx(Mf,psiTH_nr)
-    psi_prime_intermediate = urel.dydx(Mf,psiTH_intermediate)
-    psi_prime_pn = urel.dydx(Mf,psiTH_pn)
-    
-    phase_prime_interpolate_nr = interp1d(Mf,psi_prime_nr)
-    phase_prime_interpolate_intermediate = interp1d(Mf,psi_prime_intermediate)
-    phase_prime_interpolate_pn = interp1d(Mf,psi_prime_pn)
-    
-    tc1 =  phase_prime_interpolate_intermediate(Mf_transition1) - phase_prime_interpolate_pn(Mf_transition1)
-    
-    psiTH_pn += Mf*tc1
-    
-    phase_interpolate_intermediate = interp1d(Mf,psiTH_intermediate)
-    phase_interpolate_pn = interp1d(Mf,psiTH_pn)
-    phi1 = phase_interpolate_intermediate(Mf_transition1) - phase_interpolate_pn(Mf_transition1)
-    
-    psiTH_pn += phi1
-    
-    
-    tc2 =  phase_prime_interpolate_nr(Mf_transition2) - phase_prime_interpolate_intermediate(Mf_transition2)
-    
-    psiTH_nr -= Mf*tc2
-    
-    phase_interpolate_nr = interp1d(Mf,psiTH_nr)
-    phase_interpolate_intermediate = interp1d(Mf,psiTH_intermediate)
-    
-    phi2 = phase_interpolate_nr(Mf_transition2) - phase_interpolate_intermediate(Mf_transition2)
-    psiTH_nr -= phi2
-    
-    
-    theta1plus, theta1minus = mfn.theta_pm(Mf,Mf_transition1)
-    theta2plus, theta2minus = mfn.theta_pm(Mf,Mf_transition2)
-    
-    imr_phase = psiTH_pn*theta1minus + theta1plus*psiTH_intermediate*theta2minus + theta2plus*psiTH_nr
 
-    return imr_phase
+	Mf = (m1+m2)*urel.MTsun*f
+		
+	psi_prime_nr = urel.dydx(Mf,psiTH_nr)
+	psi_prime_intermediate = urel.dydx(Mf,psiTH_intermediate)
+	psi_prime_pn = urel.dydx(Mf,psiTH_pn)
+
+	phase_prime_interpolate_nr = interp1d(Mf,psi_prime_nr)
+	phase_prime_interpolate_intermediate = interp1d(Mf,psi_prime_intermediate)
+	phase_prime_interpolate_pn = interp1d(Mf,psi_prime_pn)
+
+	tc1 =  phase_prime_interpolate_intermediate(Mf_transition1) - phase_prime_interpolate_pn(Mf_transition1)
+
+	psiTH_pn += Mf*tc1
+
+	phase_interpolate_intermediate = interp1d(Mf,psiTH_intermediate)
+	phase_interpolate_pn = interp1d(Mf,psiTH_pn)
+	phi1 = phase_interpolate_intermediate(Mf_transition1) - phase_interpolate_pn(Mf_transition1)
+
+	psiTH_pn += phi1
+
+
+	tc2 =  phase_prime_interpolate_nr(Mf_transition2) - phase_prime_interpolate_intermediate(Mf_transition2)
+
+	psiTH_nr -= Mf*tc2
+
+	phase_interpolate_nr = interp1d(Mf,psiTH_nr)
+	phase_interpolate_intermediate = interp1d(Mf,psiTH_intermediate)
+
+	phi2 = phase_interpolate_nr(Mf_transition2) - phase_interpolate_intermediate(Mf_transition2)
+	psiTH_nr -= phi2
+
+
+	theta1plus, theta1minus = mfn.theta_pm(Mf,Mf_transition1)
+	theta2plus, theta2minus = mfn.theta_pm(Mf,Mf_transition2)
+
+	imr_phase = psiTH_pn*theta1minus + theta1plus*psiTH_intermediate*theta2minus + theta2plus*psiTH_nr
+
+	return imr_phase
 
 
 
