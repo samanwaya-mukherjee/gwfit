@@ -5,6 +5,7 @@ import waveform_functions as wfn
 import model_functions as mfn 
 from pycbc import types, fft, waveform
 from scipy.interpolate import interp1d
+import nr_heat
 
 
 ######### IMPORTANT ###########
@@ -208,7 +209,7 @@ def amp_phase_PhenomD_Horizon(m1,m2,chi1,chi2,DL,tc,phic,iota,f_ini=None,f_final
 
     return indexini, f, imr_amp, imr_phase
 
-def get_imrphenomd_fd(f_lower=None,f_final=None,delta_f=None,chi1=0,chi2=0,DL=200.,tc=0,phic=0,iota=0,m1=10,m2=10,
+def get_imrphenomd_horizon_fd(f_lower=None,f_final=None,delta_f=None,chi1=0,chi2=0,DL=200.,tc=0,phic=0,iota=0,m1=10,m2=10,
                 Mf2amp=0.014,Mf2phase=0.018,amp_corr=True,phase_corr=True):
         
     Ms = (m1+m2)
@@ -224,6 +225,48 @@ def get_imrphenomd_fd(f_lower=None,f_final=None,delta_f=None,chi1=0,chi2=0,DL=20
                             Mf2amp=Mf2amp,Mf2phase=Mf2phase,amp_corr=amp_corr,phase_corr=phase_corr)                            
     
     phase += 2*np.pi*f*tc + phic
+    
+    hptilde = 0.5*(1+np.cos(iota)**2)*amp*np.exp(-1j*phase)
+    hctilde = -1j*np.cos(iota)*amp*np.exp(-1j*phase)
+    
+    xpatch = np.zeros(indexini)
+     
+    hptilde2 = np.concatenate((xpatch,hptilde))
+    hctilde2 = np.concatenate((xpatch,hctilde))
+    
+       
+    hptildepy = types.FrequencySeries(hptilde2,delta_f=delta_f)
+    hctildepy = types.FrequencySeries(hctilde2,delta_f=delta_f)
+    
+    
+    return hptildepy, hctildepy
+
+
+def get_imrphenomd_heated_fd(f_lower=None,f_final=None,delta_f=None,chi1=0,chi2=0,DL=200.,tc=0,phic=0,iota=0,m1=10,m2=10,H=1.,
+                Mf2amp=0.014,Mf2phase=0.018,amp_corr=True,phase_corr=True,Mf_transition1=0.022,Mf_transition2=0.032):
+        
+    Ms = (m1+m2)
+    M = Ms*urel.MTsun
+    
+    if delta_f is None: raise Exception('Specify delta_f')
+    if f_lower is None: f_lower = 0.0035/M
+    if f_final is None: 
+        f_final = 0.3/M
+
+    ## this is added because the approximant does nto support spins right now
+    if chi1>1e-7 or chi2>1e-7: raise Exception('nonzero spins are not supported at the moment.')
+    #----------------------------------------------------------------------
+
+    indexini, f, amp, phase = amp_phase_PhenomD_Horizon(m1,m2,chi1,chi2,DL,tc,phic,iota,
+                            delta_f=delta_f,f_ini=f_lower,f_final=f_final,
+                            Mf2amp=Mf2amp,Mf2phase=Mf2phase,amp_corr=amp_corr,phase_corr=phase_corr)                            
+    
+    
+    imr_phase_TH = nr_heat.imr_tidal_heating_approximant(f,m1,m2,Mf_transition1=Mf_transition1,Mf_transition2=Mf_transition2)
+    merger_f = wfn.Mf_peak_td_fit(m1,m2)/M
+    imr_phase_TH = imr_phase_TH*urel.planck_taper_window(f,t3=merger_f,t4=merger_f*1.2,only_right=True)
+
+    phase += (H-1)*imr_phase_TH + 2*np.pi*f*tc + phic
     
     hptilde = 0.5*(1+np.cos(iota)**2)*amp*np.exp(-1j*phase)
     hctilde = -1j*np.cos(iota)*amp*np.exp(-1j*phase)
