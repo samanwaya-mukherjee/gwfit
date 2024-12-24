@@ -72,9 +72,10 @@ def psiTH_from_nr(f,m1,m2,intermediate=0,Mf_transition1=0.022,Mf_transition2=0.0
 
 
 def imr_tidal_heating_approximant(f,m1,m2,Mf_transition1=0.022,Mf_transition2=0.032):
-	psiTH_nr = psiTH_from_nr(f,m1,m2)
-    psiTH_intermediate = psiTH_from_nr(f,m1,m2,intermediate=1,Mf_transition1=Mf_transition1,Mf_transition2=Mf_transition2)
+	
     psiTH_pn = insp.psiTH_new(f,m1,m2,0,0) #spins are zero
+	psiTH_intermediate = psiTH_from_nr(f,m1,m2,intermediate=1,Mf_transition1=Mf_transition1,Mf_transition2=Mf_transition2)
+	psiTH_nr = psiTH_from_nr(f,m1,m2)
     
     Mf = (m1+m2)*urel.MTsun*f
         
