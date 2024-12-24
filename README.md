@@ -1,4 +1,4 @@
-# GWFIT
+# GWFIT (Gravitational WaveForm Integration Tools)
 
 
 
