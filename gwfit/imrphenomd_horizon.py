@@ -253,8 +253,8 @@ def get_imrphenomd_heated_fd(f_lower=None,f_final=None,delta_f=None,chi1=0,chi2=
     if f_final is None: 
         f_final = 0.3/M
 
-    ## this is added because the approximant does nto support spins right now
-    if chi1>1e-7 or chi2>1e-7: raise Exception('nonzero spins are not supported at the moment.')
+    ## this is added because the approximant does not support spins right now
+    if np.abs(chi1)>1e-7 or np.abs(chi2)>1e-7: raise Exception('nonzero spins are not supported at the moment.')
     #----------------------------------------------------------------------
 
     indexini, f, amp, phase = amp_phase_PhenomD_Horizon(m1,m2,chi1,chi2,DL,tc,phic,iota,
