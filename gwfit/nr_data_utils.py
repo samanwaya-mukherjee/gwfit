@@ -177,8 +177,8 @@ def nr_resampled_horizon(path_to_file,quantity=None,delta_tbyM=None,relaxtime=No
     
     return time_resamp, A_resamp, B_resamp
 
-def nr_resampled_horizon_with_sxs(simulation_label='SXS:BBH:0001',sampling='coarse',delta_t=None):
-
+def nr_resampled_horizon_with_sxs(simulation_label='SXS:BBH:0001',sampling='coarse',delta_t=None,geo_units=True):
+    
     simulation = sxs.load(simulation_label)
     horizons = simulation.horizons
     metadata = simulation.metadata
@@ -189,27 +189,47 @@ def nr_resampled_horizon_with_sxs(simulation_label='SXS:BBH:0001',sampling='coar
     time_sliced = horizons.A.time[reference_index:]
     mass_sliced_A = horizons.A.christodoulou_mass[reference_index:]
     mass_sliced_B = horizons.B.christodoulou_mass[reference_index:]
+    
+    if geo_units:
+        flinA = interp1d(time_sliced,mass_sliced_A,kind='cubic')
+        flinB = interp1d(time_sliced,mass_sliced_B,kind='cubic')
 
-    time_seconds = time_sliced*urel.MTsun
-    mass_A_seconds = mass_sliced_A*urel.MTsun
-    mass_B_seconds = mass_sliced_B*urel.MTsun
+        delta_t_default = np.diff(time_sliced)
 
-    flinA = interp1d(time_seconds,mass_A_seconds,kind='cubic')
-    flinB = interp1d(time_seconds,mass_B_seconds,kind='cubic')
+        if sampling is None: raise Exception('Mention whether sampling=coarse or sampling=fine')
+        if sampling =='coarse': delta_t = np.max(delta_t_default)
+        if sampling =='fine': delta_t = np.min(delta_t_default)
+        if delta_t: delta_t = delta_t
 
-    delta_t_default = np.diff(time_seconds)
+        time_sliced_even = np.arange(time_sliced[0],time_sliced[-1],delta_t)
 
-    if sampling is None: raise Exception('Mention whether sampling=coarse or sampling=fine')
-    if sampling =='coarse': delta_t = np.max(delta_t_default)
-    if sampling =='fine': delta_t = np.min(delta_t_default)
-    if delta_t: delta_t = delta_t
+        mass_A_even = flinA(time_sliced_even)
+        mass_B_even = flinB(time_sliced_even)
 
-    time_seconds_even = np.arange(time_seconds[0],time_seconds[-1],delta_t)
+        return time_sliced_even, mass_A_even, mass_B_even
 
-    mass_A_even = flinA(time_seconds_even)
-    mass_B_even = flinB(time_seconds_even)
+    
+    else:
+        time_seconds = time_sliced*urel.MTsun
+        mass_A_seconds = mass_sliced_A*urel.MTsun
+        mass_B_seconds = mass_sliced_B*urel.MTsun
 
-    return time_seconds_even, mass_A_even, mass_B_even
+        flinA = interp1d(time_seconds,mass_A_seconds,kind='cubic')
+        flinB = interp1d(time_seconds,mass_B_seconds,kind='cubic')
+
+        delta_t_default = np.diff(time_seconds)
+
+        if sampling is None: raise Exception('Mention whether sampling=coarse or sampling=fine')
+        if sampling =='coarse': delta_t = np.max(delta_t_default)
+        if sampling =='fine': delta_t = np.min(delta_t_default)
+        if delta_t: delta_t = delta_t
+
+        time_seconds_even = np.arange(time_seconds[0],time_seconds[-1],delta_t)
+
+        mass_A_even = flinA(time_seconds_even)
+        mass_B_even = flinB(time_seconds_even)
+
+        return time_seconds_even, mass_A_even, mass_B_even
 
 
 def nr_resampled_geo_with_sxs(simulation_label='SXS:BBH:0001',mode=[2,2],sampling=None,delta_t=None,junk_remove=True,merger_cutoff=False):
