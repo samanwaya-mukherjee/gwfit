@@ -29,14 +29,14 @@ def gw_flux(f,m1,m2):
     return prefactor*(p_v0 + p_v2*v**2 + p_v3*v**3 + p_v4*v**4 + p_v5*v**5 + p_v6*v**6 + p_v7*v**7 + p_v8*v**8 + p_v9*v**9)
 
 ##Eq. (3)
-def E_orb_by_m(f,m1,m2):
+def E_orb(f,m1,m2):
     M = (m1+m2)*MTsun
     Mf = M*f
     q = m1/m2
     eta = q/(1+q)**2
     eta = q/(1+q)**2
     v = (np.pi*Mf)**(1./3.)
-    prefactor = -(1/2)*eta*v**2
+    prefactor = -(1/2)*eta*M*v**2
     p_v0 = 1.
     p_v2 = (9+eta)/12
     p_v4 = (-27/8) + (19/8)*eta - (eta**2/24)
