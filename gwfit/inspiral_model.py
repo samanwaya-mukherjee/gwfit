@@ -4,14 +4,52 @@ import waveform_functions as wfn
 from pycbc import types, waveform, fft
 from scipy.special import psi as digamma
 
+## Nonspinning orbital energy function (4PN) and the GW flux function (4.5PN) (arXiv:2304.11185)
 
+##Eq. (4)
+def gw_flux(f,m1,m2):
+    M = (m1+m2)*MTsun
+    Mf = M*f
+    q = m1/m2
+    eta = q/(1+q)**2
+    v = (np.pi*Mf)**(1./3.)
+    prefactor = (32./5.)*eta**2*v**10
+    p_v0 = 1.
+    p_v2 = -1247./336.-(35./12.)*eta
+    p_v3 = 4*np.pi
+    p_v4 = -44711./9072. + (9271./504.)*eta + (65./18.)*eta**2
+    p_v5 = (-(8191./672.)-(583./24.)*eta)*np.pi
+    p_v6 = (6643739519./69854400) + (16./3.)*np.pi**2 - (1712./105.)*np.euler_gamma - (856./105.)*np.log(16*v**2) + (-(134543./7776.)+(41./48.)*np.pi**2)*eta - (94403./3024.) - (775./324.)*eta**2
+    p_v7 = (-(16285./504.) + (214745./1728.)*eta + (193385./3024.)*eta**2)*np.pi
+    p_v8 = -(323105549467./3178375200.) + (232597./4410)*np.euler_gamma - (1369./126.)*np.pi**2 + (39931./294.)*np.log(2) - (47385./1568.)*np.log(3) + (232597./8820.)*np.log(v**2)\
+        + ((-1452202403629./1466942400.) + (41478./245.)*np.euler_gamma - (267127./4608.)*np.pi**2 + (479062./2205.)*np.log(2) + (47385./392.)*np.log(3) + (20739./245.)*np.log(v**2))*eta\
+        + ((1607125./6804.) - (3157./384.)*np.pi**2)*eta**2 + (6785./504.)*eta**3 + (5./6.)*eta**4
+    p_v9 = ((265978667519./745113600.) - (6848./105.)*np.euler_gamma - (3424./105.)*np.log(16*v**2) + ((2062241./22176.) + (41./12.)*np.pi**2)*eta - (133112905./290304.)*eta**2 - (3719141./38016.)*eta**3)*np.pi
+
+    return prefactor*(p_v0 + p_v2*v**2 + p_v3*v**3 + p_v4*v**4 + p_v5*v**5 + p_v6*v**6 + p_v7*v**7 + p_v8*v**8 + p_v9*v**9)
+
+##Eq. (3)
+def E_orb_by_m(f,m1,m2):
+    M = (m1+m2)*MTsun
+    Mf = M*f
+    q = m1/m2
+    eta = q/(1+q)**2
+    eta = q/(1+q)**2
+    v = (np.pi*Mf)**(1./3.)
+    prefactor = -(1/2)*eta*v**2
+    p_v0 = 1.
+    p_v2 = (9+eta)/12
+    p_v4 = (-27/8) + (19/8)*eta - (eta**2/24)
+    p_v6 = -(675/64) + (34445/576 - (205/96)*np.pi**2)*eta - (155/96)*eta**2 - (35/5184)*eta**3
+    p_v8 = -3969/128 + (-123671/5760 + (9037/1536)*np.pi**2 + (896/15)*np.euler_gamma + (448/15)*np.log(16*v**2))*eta + (-498449/3456 + (3157/576)*np.pi**2)*eta**2 + (301/1728)*eta**3 + (77/31104)*eta**4
+    
+    return prefactor*(p_v0 + p_v2*v**2 + p_v4*v**4 + p_v6*v**6 + p_v8*v**8)
 
 # TaylorF2 with tidal heating --------------------------------------
 ####################################################################
 
 
 # Polygamma function with n=0 (digamma) -------
-
 def B2(x,y):
     z = x+1j*y
     temp = digamma(z)
