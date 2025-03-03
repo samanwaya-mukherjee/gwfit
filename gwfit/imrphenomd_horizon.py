@@ -264,7 +264,7 @@ def get_imrphenomd_heated_fd(f_lower=None,f_final=None,delta_f=None,chi1=0,chi2=
     
     imr_phase_TH = nr_heat.imr_tidal_heating_approximant(f,m1,m2,Mf_transition1=Mf_transition1,Mf_transition2=Mf_transition2)
     merger_f = wfn.Mf_peak_td_fit(m1,m2)/M
-    imr_phase_TH = imr_phase_TH*urel.planck_taper_window(f,t3=merger_f,t4=merger_f*1.2,only_right=True)
+    imr_phase_TH *= urel.planck_taper_window(f,t3=0.04/M,t4=merger_f,only_right=True)
 
     phase += (H-1)*imr_phase_TH + 2*np.pi*f*tc + phic
     
