@@ -1,9 +1,11 @@
 import numpy as np
 import scipy
-if scipy.__version__ >= '1.6.0': 
+scipy_vers = scipy.__version__
+v = scipy_vers.split('.')
+if int(v[0])<2 and int(v[1])>= 6: 
     from scipy.integrate import simpson,trapezoid
     scipy_version = 1
-if scipy.__version__ < '1.6.0': 
+if int(v[0])<2 and int(v[1])< 6: 
     from scipy.integrate import simps,trapezoid
     scipy_version = 0
 from scipy.interpolate import interp1d
