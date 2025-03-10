@@ -1,5 +1,11 @@
 import numpy as np
-from scipy.integrate import simps,trapezoid
+import scipy
+if scipy.__version__ >= '1.6.0': 
+    from scipy.integrate import simpson,trapezoid
+    scipy_version = 1
+if scipy.__version__ < '1.6.0': 
+    from scipy.integrate import simps,trapezoid
+    scipy_version = 0
 from scipy.interpolate import interp1d
 
 
@@ -169,7 +175,8 @@ def scalar_product_integrand(hf, gf, psd):
 
 def scalar_product_freq_array(hf, gf, psd, freqs, df=None):
     if df is None:
-        return np.real(simps(scalar_product_integrand(hf, gf, psd),freqs))
+        if scipy_version==0: return np.real(simps(scalar_product_integrand(hf, gf, psd),freqs))
+        else: return np.real(simpson(y=scalar_product_integrand(hf, gf, psd),x=freqs))
     else:
         summ = 2.*np.real(((hf*np.conjugate(gf)+np.conjugate(hf)*gf)/psd).sum())*df
         return summ
@@ -181,14 +188,16 @@ def snr_square_integrand(hf, psd):
     return a
 
 def snr_square_freq_array(hf, psd, freqs):
-    return simps(snr_square_integrand(hf, psd),x=freqs)
+    if scipy_version==0: return simps(snr_square_integrand(hf, psd),freqs)
+    else: return simpson(y=snr_square_integrand(hf, psd),x=freqs)
 
 def snr_freq_array(hf, psd, freqs):
     return np.sqrt(snr_square_freq_array(hf, psd, freqs))
 
 def snr_snr_sq_freq_array(hf, psd, freqs, df=None):
     if df is None:
-        snr_sq = simps(snr_square_integrand(hf, psd),freqs)
+        if scipy_version=0: snr_sq = simps(snr_square_integrand(hf, psd),freqs)
+        else: snr_sq = simpson(y=snr_square_integrand(hf, psd),x=freqs)
         return np.sqrt(snr_sq), snr_sq
     else:
         summ = 4.*(np.divide(np.power(np.abs(hf),2),psd)).sum()*df
