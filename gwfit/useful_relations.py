@@ -196,7 +196,7 @@ def snr_freq_array(hf, psd, freqs):
 
 def snr_snr_sq_freq_array(hf, psd, freqs, df=None):
     if df is None:
-        if scipy_version=0: snr_sq = simps(snr_square_integrand(hf, psd),freqs)
+        if scipy_version==0: snr_sq = simps(snr_square_integrand(hf, psd),freqs)
         else: snr_sq = simpson(y=snr_square_integrand(hf, psd),x=freqs)
         return np.sqrt(snr_sq), snr_sq
     else:
