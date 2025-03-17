@@ -249,6 +249,26 @@ def dydx(x,y):
     x2.append(x[-1])
     return np.asarray(yprime)
 
+def nth_derivative_from_data(x, y, n):
+    """Computes the nth numerical derivative from discrete data using finite differences.
+    
+    Args:
+        x: Array of x values.
+        y: Array of y values.
+        n: The order of the derivative.
+    
+    Returns:
+        Array of nth derivative values.
+    """
+    if n == 0:
+        return y
+    dy_dx = np.gradient(y, x)  # First derivative
+    for _ in range(n - 1):
+        dy_dx = np.gradient(dy_dx, x)  # Higher-order derivatives
+        x = x[1:-1]  # Trim edges to avoid redundancy
+        dy_dx = dy_dx[1:-1]  # Trim edges
+    return x, dy_dx
+
 
 ## # BLENDING FUNCTION
 
