@@ -267,7 +267,8 @@ def nth_derivative_from_data(x, y, n):
         dy_dx = np.gradient(dy_dx, x)  # Higher-order derivatives
         x = x[1:-1]  # Trim edges to avoid redundancy
         dy_dx = dy_dx[1:-1]  # Trim edges
-    return x, dy_dx
+        y = y[1:-1]
+    return x, y, dy_dx
 
 
 ## # BLENDING FUNCTION
