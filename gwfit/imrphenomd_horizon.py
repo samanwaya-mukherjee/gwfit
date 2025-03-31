@@ -210,7 +210,7 @@ def amp_phase_PhenomD_Horizon(m1,m2,chi1,chi2,DL,tc,phic,iota,f_ini=None,f_final
     return indexini, f, imr_amp, imr_phase
 
 def get_imrphenomd_horizon_fd(f_lower=None,f_final=None,delta_f=None,chi1=0,chi2=0,DL=200.,tc=0,phic=0,iota=0,m1=10,m2=10,
-                Mf2amp=0.014,Mf2phase=0.018,amp_corr=True,phase_corr=True):
+                Mf2amp=0.014,Mf2phase=0.018,amp_corr=False,phase_corr=True):
         
     Ms = (m1+m2)
     M = Ms*urel.MTsun

@@ -128,7 +128,7 @@ def psiTH(f,m1,m2,chi1,chi2,H1,H2):
 
 
 #Dephasing (Eqn 5.12 - 5.20 of arXiv: 2212.13095) -----------
-def psiTH_new(f,m1,m2,chi1,chi2):
+def psiTH_new(f,m1,m2,chi1,chi2,v0_v3_term=1):
 
     m1, m2 = m1*time_fac, m2*time_fac
     eta = (m1*m2)/(m1+m2)**2
@@ -162,7 +162,8 @@ def psiTH_new(f,m1,m2,chi1,chi2):
     
     delta_psi_8_l = -3.*delta_psi_8
     
-    delta_psi = con*(delta_psi_5*v**5 + delta_psi_5_l*v**5*np.log(v) + delta_psi_7*v**7 + delta_psi_8*v**8 + delta_psi_8_l*v**8*np.log(v))
+    if v0_v3_term: delta_psi = con*(delta_psi_5*v**5 + delta_psi_5_l*v**5*np.log(v) + delta_psi_7*v**7 + delta_psi_8*v**8 + delta_psi_8_l*v**8*np.log(v))
+    else: delta_psi = con*(delta_psi_5_l*v**5*np.log(v) + delta_psi_7*v**7 + delta_psi_8_l*v**8*np.log(v))
     
     
     return delta_psi
