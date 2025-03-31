@@ -243,7 +243,7 @@ def get_imrphenomd_horizon_fd(f_lower=None,f_final=None,delta_f=None,chi1=0,chi2
 
 
 def get_imrphenomd_heated_fd(f_lower=None,f_final=None,delta_f=None,chi1=0,chi2=0,DL=200.,tc=0,phic=0,iota=0,m1=10,m2=10,H=1.,
-                Mf2amp=0.014,Mf2phase=0.018,amp_corr=True,phase_corr=True,Mf_transition1=0.022,Mf_transition2=0.032):
+                Mf2amp=0.014,Mf2phase=0.018,amp_corr=False,phase_corr=True,Mf_transition1=0.022,Mf_transition2=0.032):
         
     Ms = (m1+m2)
     M = Ms*urel.MTsun
