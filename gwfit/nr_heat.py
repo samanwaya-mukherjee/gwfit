@@ -29,7 +29,7 @@ def fit_parameters_from_nr(m1,m2):
 		for j in range(3):
 			a[i] += beta[i][j]*eta**j
 
-	return a
+    return a
 
 def fit_parameters_from_nr_all(m1,m2):
 	
@@ -40,11 +40,11 @@ def fit_parameters_from_nr_all(m1,m2):
                 [  55360.59921672, -721467.3597681,  1938754.06140394]
             ]
 
-	eta = m1*m2/(m1+m2)**2
-	a = np.zeros(4)
-	for i in range(4):
-		for j in range(3):
-			a[i] += beta[i][j]*eta**j
+    eta = m1*m2/(m1+m2)**2
+    a = np.zeros(4)
+    for i in range(4):
+        for j in range(3):
+            a[i] += beta[i][j]*eta**j
 
 	return a
 
