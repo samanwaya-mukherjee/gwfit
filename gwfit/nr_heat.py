@@ -46,7 +46,7 @@ def fit_parameters_from_nr_all(m1,m2):
         for j in range(3):
             a[i] += beta[i][j]*eta**j
 
-	return a
+    return a
 
 def Psi_1(f,m1,m2):
     return insp.psiTH_new(f,m1,m2,0,0)
