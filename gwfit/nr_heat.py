@@ -209,6 +209,8 @@ def imr_tidal_heating_approximant(f,m1,m2,Mf_transition1=0.022,Mf_transition2=0.
     theta2plus, theta2minus = mfn.theta_pm(Mf,Mf_transition2)
     
     imr_phase = psiTH_pn*theta1minus + theta1plus*psiTH_intermediate*theta2minus + theta2plus*psiTH_nr
+
+    imr_phase -= imr_phase[0]
     
     return imr_phase
 
