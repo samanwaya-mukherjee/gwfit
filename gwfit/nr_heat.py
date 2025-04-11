@@ -185,13 +185,20 @@ def imr_tidal_heating_approximant(f,m1,m2,Mf_transition1=0.022,Mf_transition2=0.
     
     tc1 =  phase_prime_interpolate_intermediate(Mf_transition1) - phase_prime_interpolate_pn(Mf_transition1)
     
-    psiTH_pn += Mf*tc1
+    # psiTH_pn += Mf*tc1
+    psiTH_intermediate -= Mf*tc1
     
     phase_interpolate_intermediate = interp1d(Mf,psiTH_intermediate)
     phase_interpolate_pn = interp1d(Mf,psiTH_pn)
     phi1 = phase_interpolate_intermediate(Mf_transition1) - phase_interpolate_pn(Mf_transition1)
     
-    psiTH_pn += phi1
+    # psiTH_pn += phi1
+    psiTH_intermediate -= phi1
+
+    phase_interpolate_intermediate = interp1d(Mf,psiTH_intermediate)
+    phase_prime_interpolate_nr = interp1d(Mf,psi_prime_nr)
+    psi_prime_intermediate = urel.dydx(Mf,psiTH_intermediate)
+    phase_prime_interpolate_intermediate = interp1d(Mf,psi_prime_intermediate)
     
     
     tc2 =  phase_prime_interpolate_nr(Mf_transition2) - phase_prime_interpolate_intermediate(Mf_transition2)
@@ -209,7 +216,6 @@ def imr_tidal_heating_approximant(f,m1,m2,Mf_transition1=0.022,Mf_transition2=0.
     theta2plus, theta2minus = mfn.theta_pm(Mf,Mf_transition2)
     
     imr_phase = psiTH_pn*theta1minus + theta1plus*psiTH_intermediate*theta2minus + theta2plus*psiTH_nr
-
     imr_phase -= imr_phase[0]
     
     return imr_phase
