@@ -280,8 +280,8 @@ def get_imrphenomd_heated_fd(f_lower=None,f_final=None,delta_f=None,chi1=0,chi2=
     hptilde = 0.5*(1+np.cos(iota)**2)*amp*np.exp(1j*phase)
     hctilde = -1j*np.cos(iota)*amp*np.exp(1j*phase)
 
-    hptilde *= urel.planck_taper_window(hptilde.sample_frequencies,t3=merger_f,t4=1.2*merger_f,only_right=True)
-    hctilde *= urel.planck_taper_window(hctilde.sample_frequencies,t3=merger_f,t4=1.2*merger_f,only_right=True)
+    hptilde *= urel.planck_taper_window(f,t3=merger_f,t4=1.2*merger_f,only_right=True)
+    hctilde *= urel.planck_taper_window(f,t3=merger_f,t4=1.2*merger_f,only_right=True)
     
     xpatch = np.zeros(indexini)
      
