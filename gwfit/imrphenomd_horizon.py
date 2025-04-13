@@ -164,7 +164,9 @@ def amp_phase_PhenomD_Horizon(m1,m2,chi1,chi2,DL,tc,phic,iota,f_ini=None,f_final
         
     ## phase model ----------------------
     
-    phasedplus = -np.unwrap(np.angle(hplusD))
+    phasedplus = np.unwrap(np.angle(hplusD))
+    # phasedplus = waveform.utils.phase_from_frequencyseries(hplusD)
+    
     if phase_corr == False: imr_phase = phasedplus
     else:
         phaseDinterpp = interp1d(f*M,phasedplus)
@@ -207,6 +209,8 @@ def amp_phase_PhenomD_Horizon(m1,m2,chi1,chi2,DL,tc,phic,iota,f_ini=None,f_final
 
         else: imr_phase = phasedplus
 
+    imr_phase -= imr_phase[0]
+
     return indexini, f, imr_amp, imr_phase
 
 def get_imrphenomd_horizon_fd(f_lower=None,f_final=None,delta_f=None,chi1=0,chi2=0,DL=200.,tc=0,phic=0,iota=0,m1=10,m2=10,
@@ -226,8 +230,8 @@ def get_imrphenomd_horizon_fd(f_lower=None,f_final=None,delta_f=None,chi1=0,chi2
     
     phase += 2*np.pi*f*tc + phic
     
-    hptilde = 0.5*(1+np.cos(iota)**2)*amp*np.exp(-1j*phase)
-    hctilde = -1j*np.cos(iota)*amp*np.exp(-1j*phase)
+    hptilde = 0.5*(1+np.cos(iota)**2)*amp*np.exp(1j*phase)
+    hctilde = -1j*np.cos(iota)*amp*np.exp(1j*phase)
     
     xpatch = np.zeros(indexini)
      
@@ -272,8 +276,8 @@ def get_imrphenomd_heated_fd(f_lower=None,f_final=None,delta_f=None,chi1=0,chi2=
 
     phase += (H-1)*imr_phase_TH + 2*np.pi*f*tc + phic
     
-    hptilde = 0.5*(1+np.cos(iota)**2)*amp*np.exp(-1j*phase)
-    hctilde = -1j*np.cos(iota)*amp*np.exp(-1j*phase)
+    hptilde = 0.5*(1+np.cos(iota)**2)*amp*np.exp(1j*phase)
+    hctilde = -1j*np.cos(iota)*amp*np.exp(1j*phase)
 
     hptilde *= urel.planck_taper_window(hptilde.sample_frequencies,t3=merger_f,t4=1.2*merger_f,only_right=True)
     hctilde *= urel.planck_taper_window(hctilde.sample_frequencies,t3=merger_f,t4=1.2*merger_f,only_right=True)
