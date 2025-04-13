@@ -271,7 +271,8 @@ def get_imrphenomd_heated_fd(f_lower=None,f_final=None,delta_f=None,chi1=0,chi2=
     # imr_phase_TH *= urel.planck_taper_window(f,t3=0.04/M,t4=merger_f,only_right=True)
     # imr_phase_TH *= urel.planck_taper_window(f,t3=merger_f,t4=1.2*merger_f,only_right=True)
     w = urel.planck_taper_window(f,t1=1.15*merger_f,t2=1.35*merger_f,only_left=True)
-    inspiral_phase=nr_heat.Psi_1(f,m1,m2)
+    # inspiral_phase=nr_heat.Psi_1(f,m1,m2)
+    inspiral_phase=insp.psiTH_new(f,m1,m2,0,0,v0_v3_term=0)
     imr_phase_TH = (1.-w)*imr_phase_TH_a+w*inspiral_phase
 
     # phase += (H-1)*imr_phase_TH + 2*np.pi*f*tc + phic
