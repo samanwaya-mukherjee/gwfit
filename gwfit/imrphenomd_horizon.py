@@ -177,7 +177,7 @@ def amp_phase_PhenomD_Horizon(m1,m2,chi1,chi2,DL,tc,phic,iota,f_ini=None,f_final
         sigma4 = mfn.Lambda(eta,chiPN,*lambdasigma4)
 
         aug_phase = mfn.aug_phase(f,m1,m2,sigma1,sigma2,sigma3,sigma4)
-        inspiral_phase = phase_htf2 + aug_phase
+        inspiral_phase = -(phase_htf2 + aug_phase)
 
         ###### C1 continuity, continuity of phase and its derivative ------------------------
 
