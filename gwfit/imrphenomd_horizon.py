@@ -166,7 +166,7 @@ def amp_phase_PhenomD_Horizon(m1,m2,chi1,chi2,DL,tc,phic,iota,f_ini=None,f_final
     
     phasedplus = np.unwrap(np.angle(hplusD))
     # phasedplus = waveform.utils.phase_from_frequencyseries(hplusD)
-    
+
     if phase_corr == False: imr_phase = phasedplus
     else:
         phaseDinterpp = interp1d(f*M,phasedplus)
@@ -274,7 +274,8 @@ def get_imrphenomd_heated_fd(f_lower=None,f_final=None,delta_f=None,chi1=0,chi2=
     inspiral_phase=nr_heat.Psi_1(f,m1,m2)
     imr_phase_TH = (1.-w)*imr_phase_TH_a+w*inspiral_phase
 
-    phase += (H-1)*imr_phase_TH + 2*np.pi*f*tc + phic
+    # phase += (H-1)*imr_phase_TH + 2*np.pi*f*tc + phic
+    phase += (H-1)*(inspiral_phase-inspiral_phase[0]) + 2*np.pi*f*tc + phic
     
     hptilde = 0.5*(1+np.cos(iota)**2)*amp*np.exp(1j*phase)
     hctilde = -1j*np.cos(iota)*amp*np.exp(1j*phase)
