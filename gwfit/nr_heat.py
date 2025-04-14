@@ -49,7 +49,7 @@ def fit_parameters_from_nr_all(m1,m2):
     return a
 
 def Psi_1(f,m1,m2):
-    return insp.psiTH_new(f,m1,m2,0,0)
+    return insp.psiTH_new(f,m1,m2,0,0,v0_v3_term=False)
 
 def Psi_2(f,m1,m2,coeff,Mf_transition1=0.02,Mf_transition2=0.03):
     a_func = []
@@ -185,15 +185,15 @@ def imr_tidal_heating_approximant(f,m1,m2,Mf_transition1=0.022,Mf_transition2=0.
     
     tc1 =  phase_prime_interpolate_intermediate(Mf_transition1) - phase_prime_interpolate_pn(Mf_transition1)
     
-    # psiTH_pn += Mf*tc1
-    psiTH_intermediate -= Mf*tc1
+    psiTH_pn += Mf*tc1
+    # psiTH_intermediate -= Mf*tc1
     
     phase_interpolate_intermediate = interp1d(Mf,psiTH_intermediate)
     phase_interpolate_pn = interp1d(Mf,psiTH_pn)
     phi1 = phase_interpolate_intermediate(Mf_transition1) - phase_interpolate_pn(Mf_transition1)
     
-    # psiTH_pn += phi1
-    psiTH_intermediate -= phi1
+    psiTH_pn += phi1
+    # psiTH_intermediate -= phi1
 
     phase_interpolate_intermediate = interp1d(Mf,psiTH_intermediate)
     phase_prime_interpolate_nr = interp1d(Mf,psi_prime_nr)
