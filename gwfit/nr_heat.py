@@ -75,7 +75,8 @@ def Psi_3(f,m1,m2,coeff):
     return Psi_1(f,m1,m2) + psi
 
 def dmdt_nr(f,m1,m2,coeff):
-    dmdt_pn = insp.dmdt_new(f,m1,m2,0,0)
+    dm1dt_pn,dm2dt_pn = insp.dmdt_new(f,m1,m2,0,0)
+    dmdt_pn = dm1dt_pn+dm2dt_pn
     eta = m1*m2/(m1+m2)**2
     M = (m1+m2)*urel.MTsun
     v = (np.pi*M*f)**(1./3.)
@@ -225,7 +226,8 @@ def imr_tidal_heating_approximant(f,m1,m2,Mf_transition1=0.019,Mf_transition2=0.
 
 def imr_dmdt(f,m1,m2,Mf_transition1=0.019,Mf_transition2=0.032):
     M =(m1+m2)*urel.MTsun
-    dmdt_1 = insp.dmdt_new(f,m1,m2,0,0)
+    dm1dt_pn,dm2dt_pn = insp.dmdt_new(f,m1,m2,0,0)
+    dmdt_1 = dm1dt_pn+dm2dt_pn
     coeff = fit_parameters_from_nr_dmdt(m1,m2)
     dmdt_3 = dmdt_nr(f,m1,m2,coeff)
     w = urel.planck_taper_window(f,t1=0.019/M,t2=0.032/M,only_left=True)
