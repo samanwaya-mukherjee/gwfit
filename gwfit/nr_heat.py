@@ -14,24 +14,24 @@ from scipy.interpolate import interp1d
 # 			]
 
 
-def fit_parameters_from_nr(m1,m2):
+def fit_parameters_from_nr_dmdt(m1,m2):
 	
-    beta = [
-                [161351.04834113352,	-1531185.526043311,	3633803.558901329],
-                [-688223.9302013989,	6520488.603991435,	-15460193.181716902],
-                [734430.8757712821,	-6946505.253327953,	16454233.381099897],
-                [-38.45357648457703,	236.22824093593755,	-449.9997634938205]
+    alpha = [
+                [  38814.78016638, -300267.21871917,  600709.67840431],
+                [ -167858.64162733,  1294985.50103982, -2585934.1241832 ],
+                [  181750.42399209, -1398013.8886831,   2785801.88557636],
+                [ -41.06821314,  265.73167216, -532.19622692]
             ]
 
     eta = m1*m2/(m1+m2)**2
     a = np.zeros(4)
     for i in range(4):
         for j in range(3):
-            a[i] += beta[i][j]*eta**j
+            a[i] += alpha[i][j]*eta**j
 
     return a
 
-def fit_parameters_from_nr_all(m1,m2):
+def fit_parameters_from_nr_phase(m1,m2):
 	
     beta = [
                 [  -5989.09984752,   73305.34023504, -192223.76459304],
@@ -41,12 +41,12 @@ def fit_parameters_from_nr_all(m1,m2):
             ]
 
     eta = m1*m2/(m1+m2)**2
-    a = np.zeros(4)
+    b = np.zeros(4)
     for i in range(4):
         for j in range(3):
-            a[i] += beta[i][j]*eta**j
+            b[i] += beta[i][j]*eta**j
 
-    return a
+    return b
 
 def Psi_1(f,m1,m2):
     return insp.psiTH_new(f,m1,m2,0,0)
@@ -73,6 +73,12 @@ def Psi_3(f,m1,m2,coeff):
     v = (np.pi*M*f)**(1./3.)
     psi = (3/(128*eta))*(coeff[0]*v**4 + coeff[1]*v**5 + coeff[2]*v**6 + coeff[3]*v**7)
     return Psi_1(f,m1,m2) + psi
+
+def dmdt_nr(f,m1,m2,coeff):
+    dmdt_pn = insp.dmdt_new(f,m1,m2,0,0)
+    eta = m1*m2/(m1+m2)**2
+    fac = (1+eta*(coeff[0]*v + coeff[1]*v**2 + coeff[2]*v**3)/(1+eta*coeff[3]*v))
+    return dmdt_pn*fac
 
 
 
@@ -157,7 +163,7 @@ def psiTH_from_nr(f,m1,m2,intermediate=0,Mf_transition1=0.022,Mf_transition2=0.0
     return psi_TH
 
 
-def imr_tidal_heating_approximant(f,m1,m2,Mf_transition1=0.022,Mf_transition2=0.032):
+def imr_tidal_heating_approximant(f,m1,m2,Mf_transition1=0.019,Mf_transition2=0.032):
 	
 	# psiTH_pn = insp.psiTH_new(f,m1,m2,0,0) #spins are zero
 
@@ -165,7 +171,7 @@ def imr_tidal_heating_approximant(f,m1,m2,Mf_transition1=0.022,Mf_transition2=0.
 
 	# psiTH_nr = psiTH_from_nr(f,m1,m2)
 
-    coeff = fit_parameters_from_nr_all(m1,m2)
+    coeff = fit_parameters_from_nr_phase(m1,m2)
     
     psiTH_pn = Psi_1(f,m1,m2) #spins are zero
     
@@ -215,7 +221,13 @@ def imr_tidal_heating_approximant(f,m1,m2,Mf_transition1=0.022,Mf_transition2=0.
     return imr_phase
 
 
-
-
+def imr_dmdt(f,m1,m2,Mf_transition1=0.019,Mf_transition2=0.032):
+    M =(m1+m2)*urel.MTsun
+    dmdt_1 = insp.dmdt_new(f,m1,m2,0,0)
+    coeff = fit_parameters_from_nr_dmdt(m1,m2)
+    dmdt_3 = dmdt_nr(f,m1,m2)
+    w = urel.planck_taper_window(f,t1=0.019/M,t2=0.032/M,only_left=True)
+    complete_dmdt = (1.-w)*dmdt_1+w*dmdt_3
+    return complete_dmdt
 
 	
