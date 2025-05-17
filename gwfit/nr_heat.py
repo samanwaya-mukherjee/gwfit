@@ -77,6 +77,8 @@ def Psi_3(f,m1,m2,coeff):
 def dmdt_nr(f,m1,m2,coeff):
     dmdt_pn = insp.dmdt_new(f,m1,m2,0,0)
     eta = m1*m2/(m1+m2)**2
+    M = (m1+m2)*urel.MTsun
+    v = (np.pi*M*f)**(1./3.)
     fac = (1+eta*(coeff[0]*v + coeff[1]*v**2 + coeff[2]*v**3)/(1+eta*coeff[3]*v))
     return dmdt_pn*fac
 
