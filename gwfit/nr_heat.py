@@ -230,7 +230,7 @@ def imr_dmdt(f,m1,m2,Mf_transition1=0.019,Mf_transition2=0.032):
     dmdt_1 = dm1dt_pn+dm2dt_pn
     coeff = fit_parameters_from_nr_dmdt(m1,m2)
     dmdt_3 = dmdt_nr(f,m1,m2,coeff)
-    w = urel.planck_taper_window(f,t1=0.019/M,t2=0.032/M,only_left=True)
+    w = urel.planck_taper_window(f,t1=Mf_transition1/M,t2=Mf_transition2/M,only_left=True)
     complete_dmdt = (1.-w)*dmdt_1+w*dmdt_3
     return complete_dmdt
 
