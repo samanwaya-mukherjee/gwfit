@@ -64,6 +64,23 @@ def fit_parameters_from_nr_phase(m1,m2):
 
     return b
 
+def fit_parameters_from_nr_phase2(m1,m2):
+	
+    beta = [
+                [ -112.12792659,  1669.12661582, -1103.44993311],
+                [   843.46544476, -15114.01515754,  17945.96217011],
+                [ -2918.8628402, 47505.97691737, -72058.44421984],
+                [  3037.62654675, -47304.62550004,  83102.80507382]
+            ]
+
+    eta = m1*m2/(m1+m2)**2
+    b = np.zeros(4)
+    for i in range(4):
+        for j in range(3):
+            b[i] += beta[i][j]*eta**j
+
+    return b
+
 def Psi_1(f,m1,m2):
     return insp.psiTH_new(f,m1,m2,0,0)
 
@@ -268,5 +285,16 @@ def imr_dmdt(f,m1,m2,Mf_transition1=0.019,Mf_transition2=0.032):
     w = urel.planck_taper_window(f,t1=Mf_transition1/M,t2=Mf_transition2/M,only_left=True)
     complete_dmdt = (1.-w)*dmdt_1+w*dmdt_3
     return complete_dmdt
+
+
+def imr_tidal_heating_approximant2(f,m1,m2):
+    coeff = fit_parameters_from_nr_phase2(m1,m2)
+    psi_pn=Psi_1(f,m1,m2)
+    psi_pn -= psi_pn[0]
+    delta_psi=Psi_3(f,m1,m2,coeff)
+    delta_psi -= delta_psi[0]
+    psiTH = psi_pn+delta_psi
+    return psiTH
+
 
 	
