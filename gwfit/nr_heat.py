@@ -81,6 +81,23 @@ def fit_parameters_from_nr_phase2(m1,m2):
 
     return b
 
+def fit_parameters_from_nr_phase3(m1,m2):
+	
+    beta = [
+                [   -85.68941085,   6787.85060859, -43705.19843872,  75611.03119954],
+                [    723.8457672,   -57045.8117683 ,  367908.08785425, -637826.4070581 ],
+                [   -2898.27539825,   160880.80193527, -1017873.8686362 ,  1764975.53017488],
+                [    3318.41937528,  -148686.90933617,   925937.44261813, -1605648.23730778]
+            ]
+
+    eta = m1*m2/(m1+m2)**2
+    b = np.zeros(4)
+    for i in range(4):
+        for j in range(4):
+            b[i] += beta[i][j]*eta**j
+
+    return b
+
 def Psi_1(f,m1,m2):
     return insp.psiTH_new(f,m1,m2,0,0)
 
@@ -106,6 +123,13 @@ def Psi_3(f,m1,m2,coeff):
     v = (np.pi*M*f)**(1./3.)
     psi = (3/(128*eta))*(coeff[0]*v**4 + coeff[1]*v**5 + coeff[2]*v**6 + coeff[3]*v**7)
     return Psi_1(f,m1,m2) + psi
+
+def Psi_fit(f,m1,m2,coeff):
+    eta = m1*m2/(m1+m2)**2
+    M = (m1+m2)*urel.MTsun
+    v = (np.pi*M*f)**(1./3.)
+    psi = (3/(128*eta))*(coeff[0]*v**4 + coeff[1]*v**5 + coeff[2]*v**6 + coeff[3]*v**7)
+    return psi
 
 # def dmdt_nr(f,m1,m2,coeff):
 #     dm1dt_pn,dm2dt_pn = insp.dmdt_new(f,m1,m2,0,0)
@@ -288,10 +312,10 @@ def imr_dmdt(f,m1,m2,Mf_transition1=0.019,Mf_transition2=0.032):
 
 
 def imr_tidal_heating_approximant2(f,m1,m2):
-    coeff = fit_parameters_from_nr_phase2(m1,m2)
+    coeff = fit_parameters_from_nr_phase3(m1,m2)
     psi_pn=Psi_1(f,m1,m2)
     psi_pn -= psi_pn[0]
-    delta_psi=Psi_3(f,m1,m2,coeff)
+    delta_psi=Psi_fit(f,m1,m2,coeff)
     delta_psi -= delta_psi[0]
     psiTH = psi_pn+delta_psi
     return psiTH
