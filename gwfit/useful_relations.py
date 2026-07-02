@@ -236,17 +236,18 @@ def fnew(f,f1,f2):
 
 def dydx(x,y):
     
-    yprime = []
-    x2 = []
-    for i in range(len(x)-1):
-        z = (y[i+1]-y[i])/(x[i+1]-x[i])
-        yprime.append(z)
-        x2.append(x[i])
+    # yprime = []
+    # x2 = []
+    # for i in range(len(x)-1):
+    #     z = (y[i+1]-y[i])/(x[i+1]-x[i])
+    #     yprime.append(z)
+    #     x2.append(x[i])
     
-    interp = interp1d(x2,yprime,fill_value='extrapolate')
-    add_value = interp(x[-1])
-    yprime.append(add_value)
-    x2.append(x[-1])
+    # interp = interp1d(x2,yprime,fill_value='extrapolate')
+    # add_value = interp(x[-1])
+    # yprime.append(add_value)
+    # x2.append(x[-1])
+    yprime = np.gradient(y, x)
     return np.asarray(yprime)
 
 def nth_derivative_from_data(x, y, n):
