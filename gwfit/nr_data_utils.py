@@ -11,9 +11,12 @@ def nr_resampled(path_to_file,Ms,DL=200,merger_time=None,time_fix=False,fine_res
     M = Ms*urel.MTsun
     MbyDL = (Ms/DL)*urel.strain_fac
 
-    f = h5.File(path_to_file,'r')
-    dataset = f['Extrapolated_N2.dir']
-    data = dataset['Y_l2_m2.dat']
+    # f = h5.File(path_to_file,'r')
+    # dataset = f['Extrapolated_N2.dir']
+    # data = dataset['Y_l2_m2.dat']
+
+    with h5.File(path_to_file, "r") as f:
+        data = f["Extrapolated_N2.dir"]["Y_l2_m2.dat"][:]
 
     time0 = data[:,0]
     strainp0 = data[:,1]
@@ -26,20 +29,12 @@ def nr_resampled(path_to_file,Ms,DL=200,merger_time=None,time_fix=False,fine_res
     ### DEFINING THE CHIRP TIME AS 0 BY FINDING THE MAXIMUM STRAIN ####
     if time_fix==True:
         if merger_time is None:
-
-            maximstr = strainp[0]
-
-            for i in range(len(time)):
-                if strainp[i] > maximstr: 
-                    maximstr = strainp[i]
-                    j=i
+            j = np.argmax(strainp)
             maximt = time[j]
 
         else: maximt = merger_time*M
 
-
-        for k in range(len(time)):
-            time[k]=time[k]-maximt
+        time = time - maximt
         
     flinp = interp1d(time,strainp,kind='cubic')
     flinc = interp1d(time,strainc,kind='cubic')
@@ -68,9 +63,12 @@ def nr_resampled(path_to_file,Ms,DL=200,merger_time=None,time_fix=False,fine_res
 
 def nr_resampled_geo(path_to_file,merger_time=None,fine_resample=False):
    
-    f = h5.File(path_to_file,'r')
-    dataset = f['Extrapolated_N2.dir']
-    data = dataset['Y_l2_m2.dat']
+    # f = h5.File(path_to_file,'r')
+    # dataset = f['Extrapolated_N2.dir']
+    # data = dataset['Y_l2_m2.dat']
+
+    with h5.File(path_to_file, "r") as f:
+        data = f["Extrapolated_N2.dir"]["Y_l2_m2.dat"][:]
 
     time = data[:,0]
     strainp = data[:,1]
@@ -184,52 +182,38 @@ def nr_resampled_horizon_with_sxs(simulation_label='SXS:BBH:0001',sampling='coar
     metadata = simulation.metadata
     reference_time = metadata.reference_time
 
-    reference_index = np.where(horizons.A.time>=reference_time)[0][0]
+    reference_index = np.searchsorted(horizons.A.time, reference_time)
 
     time_sliced = horizons.A.time[reference_index:]
     mass_sliced_A = horizons.A.christodoulou_mass[reference_index:]
     mass_sliced_B = horizons.B.christodoulou_mass[reference_index:]
     
     if geo_units:
-        flinA = interp1d(time_sliced,mass_sliced_A,kind='cubic')
-        flinB = interp1d(time_sliced,mass_sliced_B,kind='cubic')
-
-        delta_t_default = np.diff(time_sliced)
-
-        if sampling is None: raise Exception('Mention whether sampling=coarse or sampling=fine')
-        if sampling =='coarse': delta_t = np.max(delta_t_default)
-        if sampling =='fine': delta_t = np.min(delta_t_default)
-        if delta_t: delta_t = delta_t
-
-        time_sliced_even = np.arange(time_sliced[0],time_sliced[-1],delta_t)
-
-        mass_A_even = flinA(time_sliced_even)
-        mass_B_even = flinB(time_sliced_even)
-
-        return time_sliced_even, mass_A_even, mass_B_even
-
-    
+        time = time_sliced
+        massA = mass_sliced_A
+        massB = mass_sliced_B
     else:
-        time_seconds = time_sliced*urel.MTsun
-        mass_A_seconds = mass_sliced_A*urel.MTsun
-        mass_B_seconds = mass_sliced_B*urel.MTsun
+        time = time_sliced * urel.MTsun
+        massA = mass_sliced_A * urel.MTsun
+        massB = mass_sliced_B * urel.MTsun
 
-        flinA = interp1d(time_seconds,mass_A_seconds,kind='cubic')
-        flinB = interp1d(time_seconds,mass_B_seconds,kind='cubic')
+    flinA = interp1d(time,massA,kind='cubic')
+    flinB = interp1d(time,massB,kind='cubic')
 
-        delta_t_default = np.diff(time_seconds)
+    if delta_t is None:
+        if sampling == "fine":
+            delta_t = np.diff(time).min()
+        elif sampling == "coarse":
+            delta_t = np.diff(time).max()
+        else:
+            raise ValueError("sampling must be 'coarse' or 'fine'")
 
-        if sampling is None: raise Exception('Mention whether sampling=coarse or sampling=fine')
-        if sampling =='coarse': delta_t = np.max(delta_t_default)
-        if sampling =='fine': delta_t = np.min(delta_t_default)
-        if delta_t: delta_t = delta_t
+    time_sliced_even = np.arange(time[0],time[-1],delta_t)
 
-        time_seconds_even = np.arange(time_seconds[0],time_seconds[-1],delta_t)
+    mass_A_even = flinA(time_sliced_even)
+    mass_B_even = flinB(time_sliced_even)
 
-        mass_A_even = flinA(time_seconds_even)
-        mass_B_even = flinB(time_seconds_even)
-
-        return time_seconds_even, mass_A_even, mass_B_even
+    return time_sliced_even, mass_A_even, mass_B_even
 
 
 def nr_resampled_geo_with_sxs(simulation_label='SXS:BBH:0001',mode=[2,2],sampling=None,delta_t=None,junk_remove=True,merger_cutoff=False):
@@ -245,8 +229,7 @@ def nr_resampled_geo_with_sxs(simulation_label='SXS:BBH:0001',mode=[2,2],samplin
          resampled (l,m) mode: time, real and -imag parts.
     '''
     simulation = sxs.load(simulation_label)
-    ell = mode[0]
-    em = mode[1]
+    ell, em = mode
     n = ell+ em
     
     for i in range(2,ell): 
@@ -257,46 +240,26 @@ def nr_resampled_geo_with_sxs(simulation_label='SXS:BBH:0001',mode=[2,2],samplin
     reference_time = metadata.reference_time
     merger_time = metadata.common_horizon_time
     
-    reference_index = np.where(h.t>=reference_time)[0][0]
-    
-    if junk_remove and not merger_cutoff:
-        strainp = h.real[reference_index:]
-        strainc = -h.imag[reference_index:]
-        time = h.t[reference_index:]
-    elif merger_cutoff and junk_remove:
-        merger_index = np.where(h.t>=merger_time)[0][0]
-        strainp = h.real[reference_index:merger_index]
-        strainc = -h.imag[reference_index:merger_index]
-        time = h.t[reference_index:merger_index]
-    elif merger_cutoff and not junk_remove:
-        merger_index = np.where(h.t>=merger_time)[0][0]
-        strainp = h.real[:merger_index]
-        strainc = -h.imag[:merger_index]
-        time = h.t[:merger_index]
-    else:
-        strainp = h.real
-        strainc = -h.imag
-        time = h.t
+    reference_index = np.searchsorted(h.t, reference_time)
+
+    start = reference_index if junk_remove else 0
+    stop = np.searchsorted(h.t, merger_time) if merger_cutoff else None
+
+    time = h.t[start:stop]
+    strainp = h.real[start:stop]
+    strainc = -h.imag[start:stop]
         
     flinp = interp1d(time,strainp,kind='cubic')
     flinc = interp1d(time,strainc,kind='cubic')
 
-
-    # finding maximum and minimum time spacing ---------
-    deltat=[]
-    for i in range(len(time)-1):
-        deltat.append(time[i+1]-time[i])
-
-    deltat.append(deltat[-1])
-
-    coarse_dt, fine_dt = max(deltat), min(deltat)
-    #--------------------------------------------------
-
-    if sampling == 'fine': 
-        dt = fine_dt
-    else: dt = coarse_dt
-        
-    if delta_t is not None: dt = delta_t
+    dt_array = np.diff(time)
+    if delta_t is None:
+        if sampling == "fine":
+            dt = dt_array.min()
+        else:
+            dt = dt_array.max()
+    else:
+        dt = delta_t
 
     time_resamp = np.arange(time[0],time[-1],dt)
     strainp_resamp = flinp(time_resamp)
