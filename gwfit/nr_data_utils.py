@@ -465,7 +465,7 @@ class SXSSimulation:
 
                 gw_flux += np.abs(hlm_dot)**2                
                                 
-        gw_flux *= (1./(16.*np.pi)) * self.MT**2
+        gw_flux *= (1./(16.*np.pi)) 
 
         if self.units == "SI":
             gw_flux *= const.cLight**5 / const.GNewton  # Convert to Watts
