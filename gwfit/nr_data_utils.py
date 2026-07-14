@@ -5,6 +5,81 @@ import numpy as np
 import constants as const 
 from scipy.interpolate import interp1d
 
+def filter_simulations(
+    df,
+    *,
+    object_type="BHBH",
+    q=(None, None),
+    chi1=(None, None),
+    chi2=(None, None),
+    eccentricity=(None, 1e-3),
+    number_of_orbits=(27, None),
+    spin_xy_tol=None,
+    allow_deprecated=False,
+):
+    """
+    Filter an SXS simulation dataframe.
+
+    Parameters
+    ----------
+    df : pandas.DataFrame
+        SXS simulations dataframe.
+
+    q : tuple(float | None, float | None)
+        Allowed range of reference mass ratio.
+
+    chi1, chi2 : tuple(float | None, float | None)
+        Allowed ranges of dimensionless spin magnitudes.
+
+    eccentricity : tuple(float | None, float | None)
+        Allowed range of reference eccentricity.
+
+    number_of_orbits : tuple(float | None, float | None)
+        Allowed range of inspiral orbits.
+
+    spin_xy_tol : float | None
+        If not None, require spins to be aligned/anti-aligned with the z-axis within this tolerance.
+
+    allow_deprecated : bool
+        Include deprecated simulations.
+    """
+
+    def in_range(x, bounds):
+        lower, upper = bounds
+        mask = np.ones(len(x), dtype=bool)
+        if lower is not None:
+            mask &= x >= lower
+        if upper is not None:
+            mask &= x <= upper
+        return mask
+
+    spin1 = np.vstack(df["reference_dimensionless_spin1"])
+    spin2 = np.vstack(df["reference_dimensionless_spin2"])
+
+    chi1_mag = np.linalg.norm(spin1, axis=1)
+    chi2_mag = np.linalg.norm(spin2, axis=1)
+
+    mask = (
+        (df["object_types"] == object_type)
+        & in_range(df["reference_mass_ratio"].to_numpy(), q)
+        & in_range(df["reference_eccentricity"].to_numpy(), eccentricity)
+        & in_range(df["number_of_orbits"].to_numpy(), number_of_orbits)
+        & in_range(chi1_mag, chi1)
+        & in_range(chi2_mag, chi2)
+    )
+
+    if spin_xy_tol is not None:
+        mask &= (
+            (np.abs(spin1[:, 0]) < spin_xy_tol)
+            & (np.abs(spin1[:, 1]) < spin_xy_tol)
+            & (np.abs(spin2[:, 0]) < spin_xy_tol)
+            & (np.abs(spin2[:, 1]) < spin_xy_tol)
+        )
+
+    if not allow_deprecated:
+        mask &= ~df["deprecated"].to_numpy()
+
+    return df[mask]
 
 def match_time_grid(source_time, source_data, target_time, kind="cubic"):
     """
