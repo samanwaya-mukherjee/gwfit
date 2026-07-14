@@ -440,7 +440,7 @@ class SXSSimulation:
         hlm = hlm[start:stop]
 
         # Shift merger to t = 0
-        time -= time[np.argmax(np.abs(hlm))]
+        # time -= time[np.argmax(np.abs(hlm))]
 
         time_resampled, hlm_resampled = resample(time, hlm, delta_t=delta_t, sampling=sampling)
 
