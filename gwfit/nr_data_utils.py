@@ -296,8 +296,8 @@ class SXSSimulation:
     def __init__(self,
                  simulation_label=None,
                  units="NR",
-                 Ms=1,
-                 DL=200,
+                 total_mass=1,
+                 distance=200,
                  initial_cutoff='reference',
                  final_cutoff='common_horizon',
                  ):
@@ -305,9 +305,9 @@ class SXSSimulation:
             raise ValueError("Please provide an SXS simulation label.")
         self.simulation_label = simulation_label
         self.units = units
-        self.Ms = Ms
+        self.Ms = total_mass
         self.MT = self.Ms * const.MTsun
-        self.DL = DL
+        self.DL = distance
         
         self.sim = sxs.load(simulation_label)
         self.waveform_modes = self.sim.h
@@ -332,7 +332,7 @@ class SXSSimulation:
             self.mass_scale = self.MT
             self.area_scale = self.MT**2
             self.angular_momentum_scale = self.MT**2
-            self.strain_scale = (Ms / DL) * const.strain_fac
+            self.strain_scale = (self.Ms / self.DL) * const.strain_fac
             self.entropy_scale = 1.0
 
         elif units == "SI":
@@ -345,7 +345,7 @@ class SXSSimulation:
                             * (self.Ms * const.Msun)**2
                             / const.cLight
                         )
-            self.strain_scale = (Ms / DL) * const.strain_fac
+            self.strain_scale = (self.Ms / self.DL) * const.strain_fac
             self.entropy_scale = const.kBoltzmann * const.cLight**3 / (const.GNewton * const.hbar)
 
         else:
