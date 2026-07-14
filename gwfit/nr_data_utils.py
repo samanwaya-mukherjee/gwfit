@@ -312,8 +312,8 @@ class SXSSimulation:
         self.sim = sxs.load(simulation_label)
         self.waveform_modes = self.sim.h
         self.metadata = self.sim.metadata
-        self.reference_time = self.metadata.reference_time
-        self.merger_time = self.metadata.common_horizon_time
+        self.initial_cutoff = initial_cutoff
+        self.final_cutoff = final_cutoff
 
         self.horizon = Horizon(self)
 
@@ -379,8 +379,8 @@ class SXSSimulation:
 
         if isinstance(cutoff, str):
             lookup = {
-                "reference": self.reference_time * self.time_scale,
-                "common_horizon": self.merger_time * self.time_scale,
+                "reference": self.metadata.reference_time * self.time_scale,
+                "common_horizon": self.metadata.common_horizon_time * self.time_scale,
                 "peak_amplitude": peak_time,
             }
 
