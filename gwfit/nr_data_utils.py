@@ -338,13 +338,6 @@ class SXSSimulation:
             Time step for resampling. If None, it is chosen according to
             `sampling`.
 
-        junk_remove : bool, optional
-            Remove the initial junk radiation by trimming up to the
-            reference time.
-
-        merger_cutoff : bool, optional
-            Truncate the waveform at the common horizon formation time.
-
         sampling : {"coarse", "fine"}
             If `delta_t` is not provided, use either the coarsest or
             finest native time spacing.
@@ -408,8 +401,6 @@ class SXSSimulation:
                 self,
                 mode=(2, 2),
                 delta_t=None,
-                junk_remove=True,
-                merger_cutoff=True,
                 sampling="coarse",
                 ):
         """
@@ -426,8 +417,6 @@ class SXSSimulation:
         time, hlm = self.waveform_mode(
             mode=mode,
             delta_t=delta_t,
-            junk_remove=junk_remove,
-            merger_cutoff=merger_cutoff,
             sampling=sampling,
         )
 
@@ -439,8 +428,6 @@ class SXSSimulation:
                 self,
                 mode=(2, 2),
                 delta_t=None,
-                junk_remove=True,
-                merger_cutoff=True,
                 sampling="coarse",
                 ):
         """
@@ -457,8 +444,6 @@ class SXSSimulation:
         time, phase = self.mode_phase(
             mode=mode,
             delta_t=delta_t,
-            junk_remove=junk_remove,
-            merger_cutoff=merger_cutoff,
             sampling=sampling,
         )
 
@@ -470,8 +455,6 @@ class SXSSimulation:
                 self,
                 mode=(2, 2),
                 delta_t=None,
-                junk_remove=True,
-                merger_cutoff=True,
                 sampling="coarse",
                 ):
         """
@@ -488,8 +471,6 @@ class SXSSimulation:
         time, hlm = self.waveform_mode(
             mode=mode,
             delta_t=delta_t,
-            junk_remove=junk_remove,
-            merger_cutoff=merger_cutoff,
             sampling=sampling,
         )
 
