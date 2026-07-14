@@ -495,7 +495,7 @@ class SXSSimulation:
             sampling=sampling,
         )
 
-        phase = np.unwrap(np.angle(hlm))
+        phase = - np.unwrap(np.angle(hlm))
 
         return time, phase
 
