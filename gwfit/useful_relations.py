@@ -1,3 +1,5 @@
+# Copyright (c) 2026 Samanwaya Mukherjee
+
 import numpy as np
 import scipy
 scipy_vers = scipy.__version__
@@ -9,23 +11,6 @@ if int(v[0])<2 and int(v[1])< 6:
     from scipy.integrate import simps,trapezoid
     scipy_version = 0
 from scipy.interpolate import interp1d
-
-
-#-----constants in SI units-----
-GNewton = 6.6743e-11
-cLight = 2.99792458e8
-Msun = 1.9884099021470415e+30
-Mpc = 3.085677581491367e+22
-REarth = 6378136.6
-AU = 1.4959787066e11
-year = 3.1536e7
-hPlanck = 6.62607015e-34
-
-#-----convert mass in solar masses to seconds-----
-MTsun = Msun * GNewton/cLight**3.
-time_fac = MTsun
-#-----convert mass/distance in solar mass/Mpc to dimensionless-----
-strain_fac = GNewton/cLight**2.*Msun/Mpc
 
 #-----mass ratio functions-----
 def eta_of_q(q):
@@ -234,28 +219,12 @@ def fnew(f,f1,f2):
 
 # derivative function -----------
 
-def dydx(x,y):
-    
-    # yprime = []
-    # x2 = []
-    # for i in range(len(x)-1):
-    #     z = (y[i+1]-y[i])/(x[i+1]-x[i])
-    #     yprime.append(z)
-    #     x2.append(x[i])
-    
-    # interp = interp1d(x2,yprime,fill_value='extrapolate')
-    # add_value = interp(x[-1])
-    # yprime.append(add_value)
-    # x2.append(x[-1])
-    yprime = np.gradient(y, x)
-    return np.asarray(yprime)
-
-def nth_derivative_from_data(x, y, n):
+def nth_derivative(y, x, n):
     """Computes the nth numerical derivative from discrete data using finite differences.
     
     Args:
-        x: Array of x values.
         y: Array of y values.
+        x: Array of x values.
         n: The order of the derivative.
     
     Returns:
@@ -269,7 +238,7 @@ def nth_derivative_from_data(x, y, n):
         x = x[1:-1]  # Trim edges to avoid redundancy
         dy_dx = dy_dx[1:-1]  # Trim edges
         y = y[1:-1]
-    return x, y, dy_dx
+    return dy_dx
 
 
 ## # BLENDING FUNCTION
