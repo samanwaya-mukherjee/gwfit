@@ -159,7 +159,7 @@ class Horizon:
         
         if times_to_interpolate is not None:
             time_grid, massA = match_time_grid(source_time, massA, times_to_interpolate)
-            _, massB, _ = match_time_grid(source_time, massB, times_to_interpolate)
+            _, massB = match_time_grid(source_time, massB, times_to_interpolate)
         else:
             time_grid, massA = resample(time_grid, massA, delta_t=delta_t)
             _, massB = resample(time_grid, massB, delta_t=delta_t)
