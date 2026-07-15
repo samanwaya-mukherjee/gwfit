@@ -148,49 +148,64 @@ class Horizon:
         self.horizons = parent.sim.horizons
 
     def component_christodoulou_masses(self, 
-                         times=None,
+                         times_to_interpolate=None,
+                         delta_t=None,
                          ):
-        massA = self.horizons.A.christodoulou_mass
-        massB = self.horizons.B.christodoulou_mass
-        source_time = self.horizons.A.time
+        massA = self.horizons.A.christodoulou_mass * self.parent.mass_scale
+        massB = self.horizons.B.christodoulou_mass * self.parent.mass_scale
+        source_time = self.horizons.A.time * self.parent.time_scale
 
         time_grid = source_time.copy()
         
-        if times is not None:
-            time_grid, massA = match_time_grid(source_time, massA, times)
-            _, massB = match_time_grid(source_time, massB, times)
+        if times_to_interpolate is not None:
+            time_grid, massA = match_time_grid(source_time, massA, times_to_interpolate)
+            _, massB, _ = match_time_grid(source_time, massB, times_to_interpolate)
+        else:
+            time_grid, massA = resample(time_grid, massA, delta_t=delta_t)
+            _, massB = resample(time_grid, massB, delta_t=delta_t)
         
-        return time_grid * self.parent.time_scale, massA * self.parent.mass_scale, massB * self.parent.mass_scale
-    
+        return time_grid, massA, massB
+
     def common_christodoulou_mass(self, 
-                         times=None,
+                         times_to_interpolate=None,
+                         delta_t=None,
                          ):
-        massC = self.horizons.C.christodoulou_mass
-        source_time = self.horizons.C.time
+        massC = self.horizons.C.christodoulou_mass * self.parent.mass_scale
+        source_time = self.horizons.C.time * self.parent.time_scale
 
         time_grid = source_time.copy()
         
-        if times is not None:
-            time_grid, massC = match_time_grid(source_time, massC, times)
+        if times_to_interpolate is not None:
+            time_grid, massC = match_time_grid(source_time, massC, times_to_interpolate, delta_t=delta_t)
+        else:
+            time_grid, massC = resample(time_grid, massC, delta_t=delta_t)
         
-        return time_grid * self.parent.time_scale, massC * self.parent.mass_scale
+        return time_grid, massC
 
     def component_horizon_fluxes(self,
-                                 times=None,):
-        time, massA, massB = self.component_christodoulou_masses(times=times)
+                                 times_to_interpolate=None,
+                                 delta_t=None):
+        if times_to_interpolate is not None:
+            time, massA, massB = self.component_christodoulou_masses(times_to_interpolate=times_to_interpolate, delta_t=delta_t)
+            
+        else:
+            time, massA, massB = self.component_christodoulou_masses(delta_t=delta_t)
+        
         fluxA = np.gradient(massA, time)
         fluxB = np.gradient(massB, time)
         return time, fluxA, fluxB
     
     def common_horizon_flux(self,
-                              times=None,):
-        time, massC = self.common_christodoulou_mass(times=times)
+                              times_to_interpolate=None,
+                              delta_t=None):
+        time, massC = self.common_christodoulou_mass(times_to_interpolate=times_to_interpolate, delta_t=delta_t)
         fluxC = np.gradient(massC, time)
         return time, fluxC
 
     def component_areal_masses(self, 
-                         times=None,
+                         times_to_interpolate=None,
                          scale=True,
+                         delta_t=None,
                          ):
         massA = self.horizons.A.areal_mass
         massB = self.horizons.B.areal_mass
@@ -198,10 +213,13 @@ class Horizon:
 
         time_grid = source_time.copy()
         
-        if times is not None:
-            time_grid, massA = match_time_grid(source_time, massA, times)
-            _, massB = match_time_grid(source_time, massB, times)
-        
+        if times_to_interpolate is not None:
+            time_grid, massA = match_time_grid(source_time, massA, times_to_interpolate, delta_t=delta_t)
+            _, massB = match_time_grid(source_time, massB, times_to_interpolate, delta_t=delta_t)
+        else:
+            time_grid, massA = resample(time_grid, massA, delta_t=delta_t)
+            _, massB = resample(time_grid, massB, delta_t=delta_t)
+
         if scale:
             time_grid *= self.parent.time_scale
             massA *= self.parent.mass_scale
@@ -210,27 +228,28 @@ class Horizon:
         return time_grid, massA, massB
     
     def common_areal_mass(self, 
-                         times=None,
+                         times_to_interpolate=None,
                          scale=True,
+                         delta_t=None
                          ):
         massC = self.horizons.C.areal_mass
         source_time = self.horizons.C.time
 
         time_grid = source_time.copy()
         
-        if times is not None:
-            time_grid, massC = match_time_grid(source_time, massC, times)
-        
+        if times_to_interpolate is not None:
+            time_grid, massC = match_time_grid(source_time, massC, times_to_interpolate, delta_t=delta_t)
+            return time_grid, massC
         if scale:
             time_grid *= self.parent.time_scale
             massC *= self.parent.mass_scale
-
-        return time_grid, massC
+            return time_grid, massC
 
     def component_areas(self, 
-                         times=None,
+                         times_to_interpolate=None,
+                         delta_t=None
                          ):
-        time, massA, massB = self.component_areal_masses(times=times,scale=False)
+        time, massA, massB = self.component_areal_masses(times_to_interpolate=times_to_interpolate,delta_t=delta_t,scale=False)
         areaA = 16 * np.pi * massA**2 * self.parent.area_scale
         areaB = 16 * np.pi * massB**2 * self.parent.area_scale
         time *= self.parent.time_scale
@@ -238,32 +257,34 @@ class Horizon:
         return time, areaA, areaB
     
     def common_area(self, 
-                         times=None,
+                         times_to_interpolate=None,
+                         delta_t=None
                          ):
-        time, massC = self.common_areal_mass(times=times,scale=False)
+        time, massC = self.common_areal_mass(times_to_interpolate=times_to_interpolate,delta_t=delta_t,scale=False)
         areaC = 16 * np.pi * massC**2 * self.parent.area_scale
         time *= self.parent.time_scale
 
         return time, areaC
     
     def component_entropies(self, 
-                         times=None,
+                         times_to_interpolate=None,
                          ):
-        time, areaA, areaB = self.component_areas(times=times)
-        entropyA = areaA / 4.0
-        entropyB = areaB / 4.0
+        time, areaA, areaB = self.component_areas(times_to_interpolate=times_to_interpolate)
+        entropyA = areaA / 4.0 * self.parent.entropy_scale
+        entropyB = areaB / 4.0 * self.parent.entropy_scale
 
-        return time, entropyA * self.parent.entropy_scale, entropyB * self.parent.entropy_scale
+        return time, entropyA , entropyB 
     
     def common_entropy(self, 
-                         times=None,
+                         times_to_interpolate=None,
                          ):
-        time, areaC = self.common_area(times=times)
-        entropyC = areaC / 4.0
-        return time, entropyC * self.parent.entropy_scale
+        time, areaC = self.common_area(times_to_interpolate=times_to_interpolate)
+        entropyC = areaC / 4.0 * self.parent.entropy_scale
+        return time, entropyC 
 
     def component_chis(self, 
-                         times=None,
+                         times_to_interpolate=None,
+                         delta_t=None,
                          ):
         chiA = self.horizons.A.chi_inertial_mag
         chiB = self.horizons.B.chi_inertial_mag
@@ -271,23 +292,29 @@ class Horizon:
 
         time_grid = source_time.copy()
         
-        if times is not None:
-            time_grid, chiA = match_time_grid(source_time, chiA, times)
-            _, chiB = match_time_grid(source_time, chiB, times)
+        if times_to_interpolate is not None:
+            time_grid, chiA = match_time_grid(source_time, chiA, times_to_interpolate)
+            _, chiB = match_time_grid(source_time, chiB, times_to_interpolate)
+        else:
+            time_grid, chiA = resample(time_grid, chiA, delta_t=delta_t)
+            _, chiB = resample(time_grid, chiB, delta_t=delta_t)
         
         return time_grid * self.parent.time_scale, chiA , chiB
 
     def common_chi(self, 
-                    times=None,
+                    times_to_interpolate=None,
+                    delta_t=None
                     ):
         chiC = self.horizons.C.chi_inertial_mag
         source_time = self.horizons.C.time
 
         time_grid = source_time.copy()
         
-        if times is not None:
-            time_grid, chiC = match_time_grid(source_time, chiC, times)
-        
+        if times_to_interpolate is not None:
+            time_grid, chiC = match_time_grid(source_time, chiC, times_to_interpolate)
+        else:
+            time_grid, chiC = resample(time_grid, chiC, delta_t=delta_t)
+
         return time_grid * self.parent.time_scale, chiC  
 
 
