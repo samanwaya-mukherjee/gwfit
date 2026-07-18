@@ -1,9 +1,10 @@
 # Copyright (c) 2026, Samanwaya Mukherjee
 
 import sxs
-import numpy as np 
-import constants as const 
+import numpy as np
+import constants as const
 from scipy.interpolate import interp1d
+
 
 def filter_simulations(
     df,
@@ -81,6 +82,7 @@ def filter_simulations(
 
     return df[mask]
 
+
 def match_time_grid(source_time, source_data, target_time, kind="cubic"):
     """
     Interpolate source_data onto the portion of target_time that overlaps
@@ -94,16 +96,14 @@ def match_time_grid(source_time, source_data, target_time, kind="cubic"):
         source_data interpolated onto matched_time.
     """
 
-    mask = (
-        (target_time >= source_time[0]) &
-        (target_time <= source_time[-1])
-    )
+    mask = (target_time >= source_time[0]) & (target_time <= source_time[-1])
 
     matched_time = target_time[mask]
 
     interp = interp1d(source_time, source_data, kind=kind)
 
     return matched_time, interp(matched_time)
+
 
 def resample(time, data, delta_t=None, sampling="coarse", kind="cubic"):
     """
@@ -140,6 +140,7 @@ def resample(time, data, delta_t=None, sampling="coarse", kind="cubic"):
 
     return time_resampled, interp(time_resampled)
 
+
 class Horizon:
 
     def __init__(self, parent):
@@ -150,76 +151,80 @@ class Horizon:
     @property
     def start_time(self):
         return self.horizons.A.time[0] * self.parent.time_scale
+
     @property
     def end_time(self):
         return self.horizons.C.time[-1] * self.parent.time_scale
 
-    def component_christodoulou_masses(self, 
-                         times_to_interpolate=None,
-                         delta_t=None,
-                         ):
+    def component_christodoulou_masses(
+        self,
+        times_to_interpolate=None,
+        delta_t=None,
+    ):
         massA = self.horizons.A.christodoulou_mass * self.parent.mass_scale
         massB = self.horizons.B.christodoulou_mass * self.parent.mass_scale
         source_time = self.horizons.A.time * self.parent.time_scale
 
         time_grid = source_time.copy()
-        
+
         if times_to_interpolate is not None:
             time_grid, massA = match_time_grid(source_time, massA, times_to_interpolate)
             _, massB = match_time_grid(source_time, massB, times_to_interpolate)
         else:
             time_grid, massA = resample(time_grid, massA, delta_t=delta_t)
             _, massB = resample(time_grid, massB, delta_t=delta_t)
-        
+
         return time_grid, massA, massB
 
-    def common_christodoulou_mass(self, 
-                         times_to_interpolate=None,
-                         delta_t=None,
-                         ):
+    def common_christodoulou_mass(
+        self,
+        times_to_interpolate=None,
+        delta_t=None,
+    ):
         massC = self.horizons.C.christodoulou_mass * self.parent.mass_scale
         source_time = self.horizons.C.time * self.parent.time_scale
 
         time_grid = source_time.copy()
-        
+
         if times_to_interpolate is not None:
             time_grid, massC = match_time_grid(source_time, massC, times_to_interpolate)
         else:
             time_grid, massC = resample(time_grid, massC, delta_t=delta_t)
-        
+
         return time_grid, massC
 
-    def component_horizon_fluxes(self,
-                                 times_to_interpolate=None,
-                                 delta_t=None):
+    def component_horizon_fluxes(self, times_to_interpolate=None, delta_t=None):
         if times_to_interpolate is not None:
-            time, massA, massB = self.component_christodoulou_masses(times_to_interpolate=times_to_interpolate)
-            
+            time, massA, massB = self.component_christodoulou_masses(
+                times_to_interpolate=times_to_interpolate
+            )
+
         else:
             time, massA, massB = self.component_christodoulou_masses(delta_t=delta_t)
-        
+
         fluxA = np.gradient(massA, time)
         fluxB = np.gradient(massB, time)
         return time, fluxA, fluxB
-    
-    def common_horizon_flux(self,
-                              times_to_interpolate=None,
-                              delta_t=None):
-        time, massC = self.common_christodoulou_mass(times_to_interpolate=times_to_interpolate)
+
+    def common_horizon_flux(self, times_to_interpolate=None, delta_t=None):
+        time, massC = self.common_christodoulou_mass(
+            times_to_interpolate=times_to_interpolate
+        )
         fluxC = np.gradient(massC, time)
         return time, fluxC
 
-    def component_areal_masses(self, 
-                         times_to_interpolate=None,
-                         scale=True,
-                         delta_t=None,
-                         ):
+    def component_areal_masses(
+        self,
+        times_to_interpolate=None,
+        scale=True,
+        delta_t=None,
+    ):
         massA = self.horizons.A.areal_mass
         massB = self.horizons.B.areal_mass
         source_time = self.horizons.A.time
 
         time_grid = source_time.copy()
-        
+
         if times_to_interpolate is not None:
             time_grid, massA = match_time_grid(source_time, massA, times_to_interpolate)
             _, massB = match_time_grid(source_time, massB, times_to_interpolate)
@@ -233,17 +238,13 @@ class Horizon:
             massB *= self.parent.mass_scale
 
         return time_grid, massA, massB
-    
-    def common_areal_mass(self, 
-                         times_to_interpolate=None,
-                         scale=True,
-                         delta_t=None
-                         ):
+
+    def common_areal_mass(self, times_to_interpolate=None, scale=True, delta_t=None):
         massC = self.horizons.C.areal_mass
         source_time = self.horizons.C.time
 
         time_grid = source_time.copy()
-        
+
         if times_to_interpolate is not None:
             time_grid, massC = match_time_grid(source_time, massC, times_to_interpolate)
             return time_grid, massC
@@ -254,89 +255,90 @@ class Horizon:
             massC *= self.parent.mass_scale
             return time_grid, massC
 
-    def component_areas(self, 
-                         times_to_interpolate=None,
-                         delta_t=None
-                         ):
-        time, massA, massB = self.component_areal_masses(times_to_interpolate=times_to_interpolate,delta_t=delta_t,scale=False)
+    def component_areas(self, times_to_interpolate=None, delta_t=None):
+        time, massA, massB = self.component_areal_masses(
+            times_to_interpolate=times_to_interpolate, delta_t=delta_t, scale=False
+        )
         areaA = 16 * np.pi * massA**2 * self.parent.area_scale
         areaB = 16 * np.pi * massB**2 * self.parent.area_scale
         time *= self.parent.time_scale
 
         return time, areaA, areaB
-    
-    def common_area(self, 
-                         times_to_interpolate=None,
-                         delta_t=None
-                         ):
-        time, massC = self.common_areal_mass(times_to_interpolate=times_to_interpolate,delta_t=delta_t,scale=False)
+
+    def common_area(self, times_to_interpolate=None, delta_t=None):
+        time, massC = self.common_areal_mass(
+            times_to_interpolate=times_to_interpolate, delta_t=delta_t, scale=False
+        )
         areaC = 16 * np.pi * massC**2 * self.parent.area_scale
         time *= self.parent.time_scale
 
         return time, areaC
-    
-    def component_entropies(self, 
-                         times_to_interpolate=None,
-                         ):
-        time, areaA, areaB = self.component_areas(times_to_interpolate=times_to_interpolate)
+
+    def component_entropies(
+        self,
+        times_to_interpolate=None,
+    ):
+        time, areaA, areaB = self.component_areas(
+            times_to_interpolate=times_to_interpolate
+        )
         entropyA = areaA / 4.0 * self.parent.entropy_scale
         entropyB = areaB / 4.0 * self.parent.entropy_scale
 
-        return time, entropyA , entropyB 
-    
-    def common_entropy(self, 
-                         times_to_interpolate=None,
-                         ):
+        return time, entropyA, entropyB
+
+    def common_entropy(
+        self,
+        times_to_interpolate=None,
+    ):
         time, areaC = self.common_area(times_to_interpolate=times_to_interpolate)
         entropyC = areaC / 4.0 * self.parent.entropy_scale
-        return time, entropyC 
+        return time, entropyC
 
-    def component_chis(self, 
-                         times_to_interpolate=None,
-                         delta_t=None,
-                         ):
+    def component_chis(
+        self,
+        times_to_interpolate=None,
+        delta_t=None,
+    ):
         chiA = self.horizons.A.chi_inertial_mag
         chiB = self.horizons.B.chi_inertial_mag
         source_time = self.horizons.A.time
 
         time_grid = source_time.copy()
-        
+
         if times_to_interpolate is not None:
             time_grid, chiA = match_time_grid(source_time, chiA, times_to_interpolate)
             _, chiB = match_time_grid(source_time, chiB, times_to_interpolate)
         else:
             time_grid, chiA = resample(time_grid, chiA, delta_t=delta_t)
             _, chiB = resample(time_grid, chiB, delta_t=delta_t)
-        
-        return time_grid * self.parent.time_scale, chiA , chiB
 
-    def common_chi(self, 
-                    times_to_interpolate=None,
-                    delta_t=None
-                    ):
+        return time_grid * self.parent.time_scale, chiA, chiB
+
+    def common_chi(self, times_to_interpolate=None, delta_t=None):
         chiC = self.horizons.C.chi_inertial_mag
         source_time = self.horizons.C.time
 
         time_grid = source_time.copy()
-        
+
         if times_to_interpolate is not None:
             time_grid, chiC = match_time_grid(source_time, chiC, times_to_interpolate)
         else:
             time_grid, chiC = resample(time_grid, chiC, delta_t=delta_t)
 
-        return time_grid * self.parent.time_scale, chiC  
+        return time_grid * self.parent.time_scale, chiC
 
 
 class SXSSimulation:
 
-    def __init__(self,
-                 simulation_label=None,
-                 units="NR",
-                 total_mass=1,
-                 distance=200,
-                 initial_cutoff='reference',
-                 final_cutoff='common_horizon',
-                 ):
+    def __init__(
+        self,
+        simulation_label=None,
+        units="NR",
+        total_mass=1,
+        distance=200,
+        initial_cutoff="reference",
+        final_cutoff="common_horizon",
+    ):
         if simulation_label is None:
             raise ValueError("Please provide an SXS simulation label.")
         self.simulation_label = simulation_label
@@ -344,7 +346,7 @@ class SXSSimulation:
         self.Ms = total_mass
         self.MT = self.Ms * const.MTsun
         self.DL = distance
-        
+
         self.sim = sxs.load(simulation_label)
         self.waveform_modes = self.sim.h
         self.metadata = self.sim.metadata
@@ -377,16 +379,16 @@ class SXSSimulation:
             self.mass_scale = self.Ms * const.Msun
             self.area_scale = self.length_scale**2
             self.angular_momentum_scale = (
-                            const.GNewton
-                            * (self.Ms * const.Msun)**2
-                            / const.cLight
-                        )
+                const.GNewton * (self.Ms * const.Msun) ** 2 / const.cLight
+            )
             self.strain_scale = (self.Ms / self.DL) * const.strain_fac
-            self.entropy_scale = const.kBoltzmann * const.cLight**3 / (const.GNewton * const.hbar)
+            self.entropy_scale = (
+                const.kBoltzmann * const.cLight**3 / (const.GNewton * const.hbar)
+            )
 
         else:
-            raise ValueError("units must be 'NR', 'Geometric', or 'SI'.") 
-        
+            raise ValueError("units must be 'NR', 'Geometric', or 'SI'.")
+
     @property
     def remnant_mass(self):
         return self.metadata.remnant_mass * self.mass_scale
@@ -436,11 +438,11 @@ class SXSSimulation:
         raise TypeError("cutoff must be None, a string, or a number.")
 
     def waveform_mode(
-                self,
-                mode=(2, 2),
-                delta_t=None,
-                sampling="coarse",
-                ):
+        self,
+        mode=(2, 2),
+        delta_t=None,
+        sampling="coarse",
+    ):
         """
         Get the resampled complex waveform mode h_lm.
 
@@ -465,7 +467,9 @@ class SXSSimulation:
         hlm_resampled : ndarray (complex)
             Resampled complex waveform mode.
         """
-        hlm = self.waveform_modes[:, self.waveform_modes.index(*mode)] * self.strain_scale
+        hlm = (
+            self.waveform_modes[:, self.waveform_modes.index(*mode)] * self.strain_scale
+        )
         time = self.waveform_modes.t * self.time_scale
 
         peak_time = time[np.argmax(np.abs(hlm))]
@@ -482,42 +486,45 @@ class SXSSimulation:
         # Shift merger to t = 0
         # time -= time[np.argmax(np.abs(hlm))]
 
-        time_resampled, hlm_resampled = resample(time, hlm, delta_t=delta_t, sampling=sampling)
+        time_resampled, hlm_resampled = resample(
+            time, hlm, delta_t=delta_t, sampling=sampling
+        )
 
         return time_resampled, hlm_resampled
-    
-    def gw_flux(self,
-                delta_t=None,
-                ell_min=2,ell_max=8,
-                ):
+
+    def gw_flux(
+        self,
+        delta_t=None,
+        ell_min=2,
+        ell_max=8,
+    ):
         """
         Compute the gravitational wave flux from the SXS simulation."""
         gw_flux = None
-        for ell in range(ell_min,ell_max+1):
-            for em in range(-ell,ell+1):
-                time, hlm = self.waveform_mode(mode=(ell,em),
-                                        delta_t=delta_t)
-                if gw_flux is None: 
+        for ell in range(ell_min, ell_max + 1):
+            for em in range(-ell, ell + 1):
+                time, hlm = self.waveform_mode(mode=(ell, em), delta_t=delta_t)
+                if gw_flux is None:
                     gw_flux = np.zeros_like(time)
                     t_nr = time.copy()
-                
+
                 hlm_dot = np.gradient(hlm, time)
 
-                gw_flux += np.abs(hlm_dot)**2                
-                                
-        gw_flux *= (1./(16.*np.pi)) 
+                gw_flux += np.abs(hlm_dot) ** 2
+
+        gw_flux *= 1.0 / (16.0 * np.pi)
 
         if self.units == "SI":
             gw_flux *= const.cLight**5 / const.GNewton  # Convert to Watts
-        
+
         return t_nr, gw_flux
-    
+
     def mode_phase(
-                self,
-                mode=(2, 2),
-                delta_t=None,
-                sampling="coarse",
-                ):
+        self,
+        mode=(2, 2),
+        delta_t=None,
+        sampling="coarse",
+    ):
         """
         Return the instantaneous phase of a waveform mode.
 
@@ -535,16 +542,16 @@ class SXSSimulation:
             sampling=sampling,
         )
 
-        phase = - np.unwrap(np.angle(hlm))
+        phase = -np.unwrap(np.angle(hlm))
 
         return time, phase
 
     def mode_frequency(
-                self,
-                mode=(2, 2),
-                delta_t=None,
-                sampling="coarse",
-                ):
+        self,
+        mode=(2, 2),
+        delta_t=None,
+        sampling="coarse",
+    ):
         """
         Return the instantaneous frequency of a waveform mode.
 
@@ -565,13 +572,13 @@ class SXSSimulation:
         frequency = np.gradient(phase, time) / (2 * np.pi)
 
         return time, frequency
-    
+
     def mode_amplitude(
-                self,
-                mode=(2, 2),
-                delta_t=None,
-                sampling="coarse",
-                ):
+        self,
+        mode=(2, 2),
+        delta_t=None,
+        sampling="coarse",
+    ):
         """
         Return the instantaneous amplitude of a waveform mode.
 
