@@ -176,7 +176,7 @@ class Horizon:
         time_grid = source_time.copy()
         
         if times_to_interpolate is not None:
-            time_grid, massC = match_time_grid(source_time, massC, times_to_interpolate, delta_t=delta_t)
+            time_grid, massC = match_time_grid(source_time, massC, times_to_interpolate)
         else:
             time_grid, massC = resample(time_grid, massC, delta_t=delta_t)
         
@@ -186,7 +186,7 @@ class Horizon:
                                  times_to_interpolate=None,
                                  delta_t=None):
         if times_to_interpolate is not None:
-            time, massA, massB = self.component_christodoulou_masses(times_to_interpolate=times_to_interpolate, delta_t=delta_t)
+            time, massA, massB = self.component_christodoulou_masses(times_to_interpolate=times_to_interpolate)
             
         else:
             time, massA, massB = self.component_christodoulou_masses(delta_t=delta_t)
@@ -198,7 +198,7 @@ class Horizon:
     def common_horizon_flux(self,
                               times_to_interpolate=None,
                               delta_t=None):
-        time, massC = self.common_christodoulou_mass(times_to_interpolate=times_to_interpolate, delta_t=delta_t)
+        time, massC = self.common_christodoulou_mass(times_to_interpolate=times_to_interpolate)
         fluxC = np.gradient(massC, time)
         return time, fluxC
 
@@ -214,8 +214,8 @@ class Horizon:
         time_grid = source_time.copy()
         
         if times_to_interpolate is not None:
-            time_grid, massA = match_time_grid(source_time, massA, times_to_interpolate, delta_t=delta_t)
-            _, massB = match_time_grid(source_time, massB, times_to_interpolate, delta_t=delta_t)
+            time_grid, massA = match_time_grid(source_time, massA, times_to_interpolate)
+            _, massB = match_time_grid(source_time, massB, times_to_interpolate)
         else:
             time_grid, massA = resample(time_grid, massA, delta_t=delta_t)
             _, massB = resample(time_grid, massB, delta_t=delta_t)
@@ -238,7 +238,7 @@ class Horizon:
         time_grid = source_time.copy()
         
         if times_to_interpolate is not None:
-            time_grid, massC = match_time_grid(source_time, massC, times_to_interpolate, delta_t=delta_t)
+            time_grid, massC = match_time_grid(source_time, massC, times_to_interpolate)
             return time_grid, massC
         if scale:
             time_grid *= self.parent.time_scale
