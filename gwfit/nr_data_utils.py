@@ -147,6 +147,13 @@ class Horizon:
         self.metadata = parent.metadata
         self.horizons = parent.sim.horizons
 
+    @property
+    def start_time(self):
+        return self.horizons.A.time[0] * self.parent.time_scale
+    @property
+    def end_time(self):
+        return self.horizons.C.time[-1] * self.parent.time_scale
+
     def component_christodoulou_masses(self, 
                          times_to_interpolate=None,
                          delta_t=None,
@@ -399,6 +406,9 @@ class SXSSimulation:
             str       -> named event
             float/int -> explicit time
         """
+        last_wf_time = self.waveform_modes.t[-1] * self.time_scale
+        last_horizon_time = self.horizon.end_time * self.time_scale
+        last_common_time = min(last_wf_time, last_horizon_time)
 
         if cutoff is None:
             return None
@@ -411,6 +421,7 @@ class SXSSimulation:
                 "reference": self.metadata.reference_time * self.time_scale,
                 "common_horizon": self.metadata.common_horizon_time * self.time_scale,
                 "peak_amplitude": peak_time,
+                "last_common_time": last_common_time,
             }
 
             try:
