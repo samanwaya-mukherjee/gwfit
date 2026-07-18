@@ -240,6 +240,8 @@ class Horizon:
         if times_to_interpolate is not None:
             time_grid, massC = match_time_grid(source_time, massC, times_to_interpolate)
             return time_grid, massC
+        else:
+            time_grid, massC = resample(time_grid, massC, delta_t=delta_t)
         if scale:
             time_grid *= self.parent.time_scale
             massC *= self.parent.mass_scale
