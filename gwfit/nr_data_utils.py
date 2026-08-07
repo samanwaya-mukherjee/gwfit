@@ -165,14 +165,12 @@ class Horizon:
         massB = self.horizons.B.christodoulou_mass * self.parent.mass_scale
         source_time = self.horizons.A.time * self.parent.time_scale
 
-        time_grid = source_time.copy()
-
         if times_to_interpolate is not None:
             time_grid, massA = match_time_grid(source_time, massA, times_to_interpolate)
             _, massB = match_time_grid(source_time, massB, times_to_interpolate)
         else:
-            time_grid, massA = resample(time_grid, massA, delta_t=delta_t)
-            _, massB = resample(time_grid, massB, delta_t=delta_t)
+            time_grid, massA = resample(source_time, massA, delta_t=delta_t)
+            _, massB = resample(source_time, massB, delta_t=delta_t)
 
         return time_grid, massA, massB
 
@@ -184,12 +182,10 @@ class Horizon:
         massC = self.horizons.C.christodoulou_mass * self.parent.mass_scale
         source_time = self.horizons.C.time * self.parent.time_scale
 
-        time_grid = source_time.copy()
-
         if times_to_interpolate is not None:
             time_grid, massC = match_time_grid(source_time, massC, times_to_interpolate)
         else:
-            time_grid, massC = resample(time_grid, massC, delta_t=delta_t)
+            time_grid, massC = resample(source_time, massC, delta_t=delta_t)
 
         return time_grid, massC
 
@@ -303,14 +299,12 @@ class Horizon:
         chiB = self.horizons.B.chi_inertial_mag
         source_time = self.horizons.A.time
 
-        time_grid = source_time.copy()
-
         if times_to_interpolate is not None:
             time_grid, chiA = match_time_grid(source_time, chiA, times_to_interpolate)
             _, chiB = match_time_grid(source_time, chiB, times_to_interpolate)
         else:
-            time_grid, chiA = resample(time_grid, chiA, delta_t=delta_t)
-            _, chiB = resample(time_grid, chiB, delta_t=delta_t)
+            time_grid, chiA = resample(source_time, chiA, delta_t=delta_t)
+            _, chiB = resample(source_time, chiB, delta_t=delta_t)
 
         return time_grid * self.parent.time_scale, chiA, chiB
 

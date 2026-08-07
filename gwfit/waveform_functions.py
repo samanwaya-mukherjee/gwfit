@@ -1,6 +1,6 @@
 import numpy as np
 import useful_relations as urel
-from useful_relations import MTsun, time_fac, strain_fac
+from constants import MTsun, time_fac, strain_fac
 import model_functions as mfn
 
 
