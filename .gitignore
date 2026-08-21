@@ -1,3 +1,7 @@
 .ipynb_checkpoints/
 __pycache__/
 *.vscode*
+# Python build artifacts
+build/
+dist/
+*.egg-info/
