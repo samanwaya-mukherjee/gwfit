@@ -14,20 +14,42 @@ GWFIT is a Python package for gravitational-wave modelling and analysis, with ut
 
 ## Installation
 
+There are several ways to install GWFIT depending on whether you want the latest stable release or the development version.
+
+### 1. Install the latest stable release from PyPI
+
+For most users, the recommended method is to install GWFIT directly from PyPI:
+
+```bash
+python -m pip install gwfit
+```
+
+### 2. Install the latest stable release from git repository
+
+```bash
+python -m pip install git+https://gitlab.com/samanwaya-mukherjee/gwfit.git
+```
+
+### 2. Install by cloning the source
+
 Clone the repository:
 
 ```bash
 git clone https://gitlab.com/samanwaya-mukherjee/gwfit.git
 cd gwfit
+python -m pip install .
 ```
+
+[
+    For development, the editable installation is recommended so that changes to the source code are immediately available. 
 
 Install GWFIT in editable mode:
 
 ```bash
 python -m pip install -e .
 ```
+]
 
-For development, the editable installation is recommended so that changes to the source code are immediately available.
 
 ### Legacy functionality
 
@@ -73,10 +95,24 @@ gwfit/
     └── gwfit/
         ├── __init__.py
         ├── legacy/
+        │   ├── nr_data_utils_legacy.py
+        │   ├── nr_heat_legacy.py
+        │   └── inspiral_th_model_legacy.py
         ├── neutron_star/
+        │   ├── __init__.py
+        │   └── neutron_star_functions.py
         ├── nr/
+        │   ├── __init__.py
+        │   ├── nr_data_utils.py
+        │   └── nr_heat.py
         ├── physics/
+        │   ├── __init__.py
+        │   ├── constants.py
+        │   └── useful_relations.py
         └── waveforms/
+            ├── __init__.py
+            ├── inspiral_model.py
+            └── waveform_functions.py
 ```
 
 ## Dependencies
