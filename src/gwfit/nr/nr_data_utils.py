@@ -82,6 +82,7 @@ def filter_simulations(
 
     return df[mask]
 
+
 def save_sxs_data_to_h5(labels, file_path):
     """
     Extracts numerical relativity data from SXS simulations and saves
@@ -93,30 +94,34 @@ def save_sxs_data_to_h5(labels, file_path):
         for sim_label in labels:
             sim_prem = SXSSimulation(
                 simulation_label=sim_label,
-                initial_cutoff='reference',
-                final_cutoff='common_horizon',
+                initial_cutoff="reference",
+                final_cutoff="common_horizon",
             )
-            print(f"Processing {sim_label} (q = {sim_prem.metadata.reference_mass_ratio:.2f})")
-            
+            print(
+                f"Processing {sim_label} (q = {sim_prem.metadata.reference_mass_ratio:.2f})"
+            )
+
             # Extract frequencies and fluxes
             twf, gw_freq = sim_prem.mode_frequency(mode=(2, 2))
             _, gw_flux = sim_prem.gw_flux(ell_max=8)
-            t, fA, fB = sim_prem.horizon.component_horizon_fluxes(times_to_interpolate=twf)
+            t, fA, fB = sim_prem.horizon.component_horizon_fluxes(
+                times_to_interpolate=twf
+            )
 
             dMdt = fA + fB
             mask = (twf >= t[0]) & (twf <= t[-1])
 
             # Create group for current simulation
             group = f.create_group(sim_label)
-            
+
             # Write compressed datasets
             group.create_dataset("gw_freq", data=gw_freq[mask], compression="gzip")
             group.create_dataset("dMdt", data=dMdt, compression="gzip")
             group.create_dataset("gw_flux", data=gw_flux[mask], compression="gzip")
-            
+
             # Save mass ratio as attribute
             group.attrs["q"] = sim_prem.metadata.reference_mass_ratio
-            
+
     print(f"Successfully saved data to {file_path}")
 
 
@@ -125,7 +130,7 @@ def load_sxs_data_from_h5(labels, file_path):
     Loads saved SXS simulation data from an HDF5 file into 4 dictionaries.
     """
     import h5py
-    
+
     freq_data = {}
     dMdt_data = {}
     gw_flux_data = {}
@@ -134,7 +139,7 @@ def load_sxs_data_from_h5(labels, file_path):
     with h5py.File(file_path, "r") as f:
         for sim_label in labels:
             group = f[sim_label]
-            
+
             freq_data[sim_label] = group["gw_freq"][:]
             dMdt_data[sim_label] = group["dMdt"][:]
             gw_flux_data[sim_label] = group["gw_flux"][:]
