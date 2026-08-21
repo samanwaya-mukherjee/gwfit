@@ -1,1 +1,0 @@
-"""Legacy GWFIT implementations."""
