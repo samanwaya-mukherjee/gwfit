@@ -1,10 +1,7 @@
 import numpy as np
 import inspiral_model as insp
-import imrphenomd_horizon as phor
 import useful_relations as urel
-import waveform_functions as wfn
-import model_functions as mfn
-from scipy.interpolate import interp1d
+import constants as const
 
 
 def fit_parameters_from_nr_dmdt(m1, m2):
@@ -46,7 +43,7 @@ def dmdt_nr(f, m1, m2, coeff):
     dm1dt_pn, dm2dt_pn = insp.dmdt_new(f, m1, m2, 0, 0)
     dmdt_pn = dm1dt_pn + dm2dt_pn
     eta = m1 * m2 / (m1 + m2) ** 2
-    M = (m1 + m2) * urel.MTsun
+    M = (m1 + m2) * const.MTsun
     v = (np.pi * M * f) ** (1.0 / 3.0)
     log_dmdt = np.log(dmdt_pn) * (
         1 + eta * (coeff[0] * v + coeff[1] * v**2 + coeff[2] * v**3)
@@ -60,7 +57,7 @@ def Psi_1(f, m1, m2):
 
 def Psi_2(f, m1, m2, coeff, Mf_transition1=0.02, Mf_transition2=0.03):
     a_func = []
-    Mf = (m1 + m2) * urel.MTsun * f
+    Mf = (m1 + m2) * const.MTsun * f
     eta = m1 * m2 / (m1 + m2) ** 2
     v = (np.pi * Mf) ** (1 / 3)
     for i in range(4):
@@ -79,7 +76,7 @@ def Psi_2(f, m1, m2, coeff, Mf_transition1=0.02, Mf_transition2=0.03):
 
 def Psi_3(f, m1, m2, coeff):
     eta = m1 * m2 / (m1 + m2) ** 2
-    M = (m1 + m2) * urel.MTsun
+    M = (m1 + m2) * const.MTsun
     v = (np.pi * M * f) ** (1.0 / 3.0)
     psi = (3 / (128 * eta)) * (
         coeff[0] * v**4 + coeff[1] * v**5 + coeff[2] * v**6 + coeff[3] * v**7
@@ -89,7 +86,7 @@ def Psi_3(f, m1, m2, coeff):
 
 def Psi_fit(f, m1, m2, coeff):
     eta = m1 * m2 / (m1 + m2) ** 2
-    M = (m1 + m2) * urel.MTsun
+    M = (m1 + m2) * const.MTsun
     v = (np.pi * M * f) ** (1.0 / 3.0)
     psi = (3 / (128 * eta)) * (
         coeff[0] * v**4 + coeff[1] * v**5 + coeff[2] * v**6 + coeff[3] * v**7
@@ -98,7 +95,7 @@ def Psi_fit(f, m1, m2, coeff):
 
 
 def imr_dmdt(f, m1, m2, Mf_transition1=0.019, Mf_transition2=0.032):
-    M = (m1 + m2) * urel.MTsun
+    M = (m1 + m2) * const.MTsun
     dm1dt_pn, dm2dt_pn = insp.dmdt_new(f, m1, m2, 0, 0)
     dmdt_1 = dm1dt_pn + dm2dt_pn
     coeff = fit_parameters_from_nr_dmdt(m1, m2)

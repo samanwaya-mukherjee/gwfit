@@ -1,17 +1,16 @@
 import numpy as np
 import inspiral_model as insp 
-import imrphenomd_horizon as phor 
 import useful_relations as urel
-import waveform_functions as wfn
 import model_functions as mfn
+import constants as const
 from scipy.interpolate import interp1d
 
-beta = [
-				[  -8287.60083325,  102471.0357223,  -272927.44643436],
-                [  51760.41259419, -654282.80673584, 1758244.08930711],
-                [ -108300.75797795,  1395202.69711306, -3777615.90379674],
-                [  75636.04409168, -992413.78926107, 2706250.44035738]
-			]
+# beta = [
+# 				[  -8287.60083325,  102471.0357223,  -272927.44643436],
+#                 [  51760.41259419, -654282.80673584, 1758244.08930711],
+#                 [ -108300.75797795,  1395202.69711306, -3777615.90379674],
+#                 [  75636.04409168, -992413.78926107, 2706250.44035738]
+# 			]
 
 
 def fit_parameters_from_nr_dmdt(m1,m2):
@@ -70,7 +69,7 @@ def fit_parameters_from_nr_phase2(m1,m2):
 # def psiTH_from_nr(f,m1,m2,intermediate=0,Mf_transition1=0.022,Mf_transition2=0.032,PN_order=6.):
 	
 #     eta = m1*m2/(m1+m2)**2
-#     Mf = (m1+m2)*urel.MTsun*f
+#     Mf = (m1+m2)*const.MTsun*f
 #     v = (np.pi*Mf)**(1./3.)
     
 #     a = fit_parameters_from_nr_all(m1,m2)
@@ -152,7 +151,7 @@ def Psi_1(f,m1,m2):
 
 def Psi_2(f,m1,m2,coeff,Mf_transition1=0.02,Mf_transition2=0.03):
     a_func = []
-    Mf = (m1+m2)*urel.MTsun*f
+    Mf = (m1+m2)*const.MTsun*f
     eta = m1*m2/(m1+m2)**2
     v=(np.pi*Mf)**(1/3)
     for i in range(4):
@@ -168,14 +167,14 @@ def Psi_2(f,m1,m2,coeff,Mf_transition1=0.02,Mf_transition2=0.03):
 
 def Psi_3(f,m1,m2,coeff):
     eta = m1*m2/(m1+m2)**2
-    M = (m1+m2)*urel.MTsun
+    M = (m1+m2)*const.MTsun
     v = (np.pi*M*f)**(1./3.)
     psi = (3/(128*eta))*(coeff[0]*v**4 + coeff[1]*v**5 + coeff[2]*v**6 + coeff[3]*v**7)
     return Psi_1(f,m1,m2) + psi
 
 def Psi_fit(f,m1,m2,coeff):
     eta = m1*m2/(m1+m2)**2
-    M = (m1+m2)*urel.MTsun
+    M = (m1+m2)*const.MTsun
     v = (np.pi*M*f)**(1./3.)
     psi = (3/(128*eta))*(coeff[0]*v**4 + coeff[1]*v**5 + coeff[2]*v**6 + coeff[3]*v**7)
     return psi
@@ -196,7 +195,7 @@ def imr_tidal_heating_approximant(f,m1,m2,Mf_transition1=0.019,Mf_transition2=0.
     
     psiTH_nr = Psi_3(f,m1,m2,coeff)
     
-    Mf = (m1+m2)*urel.MTsun*f
+    Mf = (m1+m2)*const.MTsun*f
 		
     psi_prime_nr = urel.dydx(Mf,psiTH_nr)
     psi_prime_intermediate = urel.dydx(Mf,psiTH_intermediate)
@@ -239,7 +238,7 @@ def imr_tidal_heating_approximant(f,m1,m2,Mf_transition1=0.019,Mf_transition2=0.
 
 
 # def imr_dmdt(f,m1,m2,Mf_transition1=0.019,Mf_transition2=0.032):
-#     M =(m1+m2)*urel.MTsun
+#     M =(m1+m2)*const.MTsun
 #     dm1dt_pn,dm2dt_pn = insp.dmdt_new(f,m1,m2,0,0)
 #     dmdt_1 = dm1dt_pn+dm2dt_pn
 #     coeff = fit_parameters_from_nr_dmdt(m1,m2)

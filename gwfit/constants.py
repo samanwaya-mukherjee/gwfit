@@ -1,12 +1,12 @@
 # Copyright (c) 2026 Samanwaya Mukherjee
 
-from scipy import constants
+from scipy import constants as scipy_constants
 
-GNewton = constants.G
-cLight  = constants.c
-kBoltzmann = constants.k
-hPlanck = constants.h
-hbar = constants.hbar
+GNewton = scipy_constants.G
+cLight  = scipy_constants.c
+kBoltzmann = scipy_constants.k
+hPlanck = scipy_constants.h
+hbar = scipy_constants.hbar
 
 REarth = 6378136.6
 AU = 1.4959787066e11
