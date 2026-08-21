@@ -219,14 +219,12 @@ class Horizon:
         massB = self.horizons.B.areal_mass
         source_time = self.horizons.A.time
 
-        time_grid = source_time.copy()
-
         if times_to_interpolate is not None:
             time_grid, massA = match_time_grid(source_time, massA, times_to_interpolate)
             _, massB = match_time_grid(source_time, massB, times_to_interpolate)
         else:
-            time_grid, massA = resample(time_grid, massA, delta_t=delta_t)
-            _, massB = resample(time_grid, massB, delta_t=delta_t)
+            time_grid, massA = resample(source_time, massA, delta_t=delta_t)
+            _, massB = resample(source_time, massB, delta_t=delta_t)
 
         if scale:
             time_grid *= self.parent.time_scale
@@ -245,11 +243,12 @@ class Horizon:
             time_grid, massC = match_time_grid(source_time, massC, times_to_interpolate)
             return time_grid, massC
         else:
-            time_grid, massC = resample(time_grid, massC, delta_t=delta_t)
+            time_grid, massC = resample(source_time, massC, delta_t=delta_t)
         if scale:
             time_grid *= self.parent.time_scale
             massC *= self.parent.mass_scale
-            return time_grid, massC
+
+        return time_grid, massC
 
     def component_areas(self, times_to_interpolate=None, delta_t=None):
         time, massA, massB = self.component_areal_masses(
