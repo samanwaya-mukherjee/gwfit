@@ -1,6 +1,7 @@
 .ipynb_checkpoints/
 __pycache__/
 *.vscode*
+*.py[cod]
 # Python build artifacts
 build/
 dist/
