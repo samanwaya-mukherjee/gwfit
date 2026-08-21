@@ -1,0 +1,7 @@
+numpy
+scipy
+sxs
+
+[legacy]
+h5py
+pycbc
