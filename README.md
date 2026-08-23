@@ -1,6 +1,24 @@
 # GWFIT
 
-**Gravitational Waveform Integration Tools**
+<p align="center">
+  <img src="assets/gwfit_logo.png" alt="gwfit logo" width="220">
+</p>
+
+<p align="center">
+  <b>Gravitational WaveForm Integration Tools</b>
+</p>
+
+<p align="center">
+  <a href="https://pypi.org/project/gwfit/">
+    <img src="https://img.shields.io/pypi/v/gwfit.svg" alt="PyPI version">
+  </a>
+  <a href="https://gitlab.com/samanwaya-mukherjee/gwfit">
+    <img src="https://img.shields.io/badge/source-GitLab-black.svg" alt="GitLab">
+  </a>
+  <img src="https://img.shields.io/badge/python-%3E%3D3.10-blue.svg" alt="Python">
+  <img src="https://img.shields.io/badge/license-MIT-green.svg" alt="License">
+</p>
+
 
 GWFIT is a Python package for gravitational-wave modelling and analysis, with utilities for waveform generation, inspiral modelling, numerical-relativity data analysis, horizon fluxes, and neutron-star calculations.
 
@@ -13,6 +31,12 @@ GWFIT is a Python package for gravitational-wave modelling and analysis, with ut
 * Physical constants and useful relations
 
 ## Installation
+
+Create and activate a conda environment
+```bash
+conda create -n gwfit-env python=3.11 -y
+conda activate gwfit
+```
 
 There are several ways to install GWFIT depending on whether you want the latest stable release or the development version.
 
@@ -122,6 +146,7 @@ The core package currently depends on:
 * NumPy
 * SciPy
 * SXS
+* Matplotlib 
 
 Additional dependencies for legacy functionality are:
 
