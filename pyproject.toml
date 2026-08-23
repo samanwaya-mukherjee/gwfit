@@ -1,6 +1,6 @@
 [project]
 name = "GWFIT"
-version = "0.1.1"
+version = "1.0.0"
 description = "Gravitational Waveform Integration Tools"
 readme = "README.md"
 license = {file = "LICENSE"}
