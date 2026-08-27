@@ -1,6 +1,8 @@
 """GWFIT: Gravitational Waveform Integration Tools."""
 
-__version__ = "1.0.0"
+from importlib.metadata import version
+
+__version__ = version("gwfit")
 
 from .nr import nr_data_utils
 from .physics import constants, useful_relations
