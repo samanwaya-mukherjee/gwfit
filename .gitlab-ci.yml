@@ -8,6 +8,8 @@ variables:
 build:
   stage: build
   image: python:3.11-slim
+  before_script:
+    - apt-get update && apt-get install -y --no-install-recommends git && rm -rf /var/lib/apt/lists/*
   script:
     - python -m pip install --upgrade build
     - python -m build
