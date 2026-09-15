@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.1] - 2026-09-15
+
+### Added
+
+- Changelog file.
+
 ### Changed
 
 - Version is now derived dynamically from git tags via `setuptools_scm` instead of being hardcoded in `pyproject.toml`.
@@ -23,6 +29,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Style improvements.
 
-[Unreleased]: https://gitlab.com/samanwaya-mukherjee/gwfit/-/compare/v1.0.0...HEAD
+[Unreleased]: https://gitlab.com/samanwaya-mukherjee/gwfit/-/compare/v1.0.1...HEAD
+[1.0.1]: https://gitlab.com/samanwaya-mukherjee/gwfit/-/compare/v1.0.0...v1.0.1
 [1.0.0]: https://gitlab.com/samanwaya-mukherjee/gwfit/-/compare/v0.1.1...v1.0.0
 [0.1.1]: https://gitlab.com/samanwaya-mukherjee/gwfit/-/releases/v0.1.1
