@@ -27,6 +27,7 @@ publish:
     TWINE_PASSWORD: $PYPI_API_TOKEN
   script:
     - python -m pip install --upgrade twine
-    - python -m twine upload dist/*
+    - echo "TWINE_PASSWORD length is ${#TWINE_PASSWORD} characters"
+    - python -m twine upload --verbose dist/*
   rules:
     - if: '$CI_COMMIT_TAG =~ /^v\d+\.\d+\.\d+/'
