@@ -1,6 +1,6 @@
 [project]
 name = "GWFIT"
-version = "1.0.0"
+dynamic = ["version"]
 description = "Gravitational Waveform Integration Tools"
 readme = "README.md"
 license = {file = "LICENSE"}
@@ -22,8 +22,10 @@ legacy = [
 ]
 
 [build-system]
-requires = ["setuptools>=68"]
+requires = ["setuptools>=68", "setuptools_scm>=8"]
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+[tool.setuptools_scm]
