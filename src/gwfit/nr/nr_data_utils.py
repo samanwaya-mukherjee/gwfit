@@ -207,6 +207,48 @@ def resample(time, data, delta_t=None, sampling="coarse", kind="cubic"):
 
 
 class Horizon:
+    """
+    Apparent-horizon data for an SXS binary-black-hole simulation.
+
+    Wraps the ``horizons`` object of an :class:`SXSSimulation` (as loaded by
+    the ``sxs`` package), exposing the trajectories of the two initial
+    black-hole horizons ("component" quantities, labelled A and B) and the
+    post-merger remnant horizon ("common" quantities, labelled C). All
+    quantities are returned either on their native (possibly irregular) NR
+    time sampling resampled to a uniform grid via `delta_t`, or interpolated
+    onto an arbitrary set of times via `times_to_interpolate`, and are scaled
+    according to the unit system (`"NR"`, `"Geometric"`, or `"SI"`) of the
+    parent :class:`SXSSimulation`.
+
+    Parameters
+    ----------
+    parent : SXSSimulation
+        The simulation this horizon data belongs to. Used both to access the
+        raw ``sxs`` horizons object (`parent.sim.horizons`) and to read the
+        unit-dependent scale factors (`time_scale`, `mass_scale`,
+        `area_scale`, `entropy_scale`, ...) applied to the quantities
+        returned by this class's methods.
+
+    Attributes
+    ----------
+    parent : SXSSimulation
+        Back-reference to the owning simulation wrapper.
+
+    metadata : sxs.metadata.Metadata
+        Alias of `parent.metadata`.
+
+    horizons : sxs.horizons.HorizonQuantities
+        The raw apparent-horizon data from the ``sxs`` package, with
+        sub-objects `.A`, `.B` (the two initial black holes) and `.C`
+        (the common/remnant horizon formed after merger).
+
+    Notes
+    -----
+    Methods come in "component" (returning both A and B quantities) and
+    "common" (returning the C quantity) variants, covering Christodoulou
+    mass, horizon mass flux, areal mass, area, entropy (area / 4), and
+    dimensionless spin magnitude (`chi`).
+    """
 
     def __init__(self, parent):
         self.parent = parent
@@ -226,6 +268,32 @@ class Horizon:
         times_to_interpolate=None,
         delta_t=None,
     ):
+        """
+        Christodoulou mass of each initial black hole (A and B) over time.
+
+        The two horizons are returned on a common time grid, sampled either
+        at `delta_t` (resampling horizon A's native time stamps) or at
+        `times_to_interpolate`. Masses and time are scaled by the parent
+        simulation's `mass_scale` / `time_scale`.
+
+        Parameters
+        ----------
+        times_to_interpolate : ndarray, optional
+            Times (already in the parent's unit system) at which to
+            interpolate both masses. If given, `delta_t` is ignored.
+        delta_t : float, optional
+            Uniform time spacing to resample onto when
+            `times_to_interpolate` is not given. If neither is given, the
+            horizon's native (irregular) time sampling is used.
+
+        Returns
+        -------
+        time_grid : ndarray
+            Common time array, in the parent's unit system.
+        massA, massB : ndarray
+            Christodoulou mass of black holes A and B, scaled by
+            `mass_scale`.
+        """
         massA = self.horizons.A.christodoulou_mass * self.parent.mass_scale
         massB = self.horizons.B.christodoulou_mass * self.parent.mass_scale
         source_time = self.horizons.A.time * self.parent.time_scale
@@ -244,6 +312,31 @@ class Horizon:
         times_to_interpolate=None,
         delta_t=None,
     ):
+        """
+        Christodoulou mass of the post-merger remnant horizon (C) over time.
+
+        Sampled either at `delta_t` (resampling horizon C's native time
+        stamps) or at `times_to_interpolate`. Mass and time are scaled by
+        the parent simulation's `mass_scale` / `time_scale`.
+
+        Parameters
+        ----------
+        times_to_interpolate : ndarray, optional
+            Times (already in the parent's unit system) at which to
+            interpolate the mass. If given, `delta_t` is ignored.
+        delta_t : float, optional
+            Uniform time spacing to resample onto when
+            `times_to_interpolate` is not given. If neither is given, the
+            horizon's native (irregular) time sampling is used.
+
+        Returns
+        -------
+        time_grid : ndarray
+            Time array, in the parent's unit system.
+        massC : ndarray
+            Christodoulou mass of the remnant horizon, scaled by
+            `mass_scale`.
+        """
         massC = self.horizons.C.christodoulou_mass * self.parent.mass_scale
         source_time = self.horizons.C.time * self.parent.time_scale
 
@@ -255,6 +348,28 @@ class Horizon:
         return time_grid, massC
 
     def component_horizon_fluxes(self, times_to_interpolate=None, delta_t=None):
+        """
+        Rate of change of each initial black hole's Christodoulou mass.
+
+        Computed as the numerical time-derivative (`numpy.gradient`) of
+        `component_christodoulou_masses`, i.e. the mass flux absorbed by
+        each horizon (e.g. from tidal/horizon heating) over the inspiral.
+
+        Parameters
+        ----------
+        times_to_interpolate : ndarray, optional
+            Forwarded to `component_christodoulou_masses`.
+        delta_t : float, optional
+            Forwarded to `component_christodoulou_masses`; ignored if
+            `times_to_interpolate` is given.
+
+        Returns
+        -------
+        time : ndarray
+            Common time array, in the parent's unit system.
+        fluxA, fluxB : ndarray
+            d(mass)/dt for black holes A and B.
+        """
         if times_to_interpolate is not None:
             time, massA, massB = self.component_christodoulou_masses(
                 times_to_interpolate=times_to_interpolate
@@ -268,6 +383,28 @@ class Horizon:
         return time, fluxA, fluxB
 
     def common_horizon_flux(self, times_to_interpolate=None, delta_t=None):
+        """
+        Rate of change of the remnant horizon's Christodoulou mass.
+
+        Computed as the numerical time-derivative (`numpy.gradient`) of
+        `common_christodoulou_mass`, i.e. the mass flux absorbed by the
+        merged remnant horizon after merger (e.g. from ringdown radiation).
+
+        Parameters
+        ----------
+        times_to_interpolate : ndarray, optional
+            Forwarded to `common_christodoulou_mass`.
+        delta_t : float, optional
+            Forwarded to `common_christodoulou_mass`; ignored if
+            `times_to_interpolate` is given.
+
+        Returns
+        -------
+        time : ndarray
+            Time array, in the parent's unit system.
+        fluxC : ndarray
+            d(mass)/dt for the remnant horizon.
+        """
         time, massC = self.common_christodoulou_mass(
             times_to_interpolate=times_to_interpolate
         )
@@ -280,6 +417,35 @@ class Horizon:
         scale=True,
         delta_t=None,
     ):
+        """
+        Areal (irreducible) mass of each initial black hole over time.
+
+        The areal mass is derived from the horizon's surface area rather
+        than its Christodoulou mass; see `component_areas` for the area
+        itself. The two horizons are returned on a common time grid, sampled
+        either at `delta_t` or at `times_to_interpolate`.
+
+        Parameters
+        ----------
+        times_to_interpolate : ndarray, optional
+            Times at which to interpolate both masses. If given, `delta_t`
+            is ignored. Interpreted in the parent's unit system if `scale`
+            is True, otherwise in native NR units.
+        scale : bool, default True
+            If True, scale time and mass by the parent simulation's
+            `time_scale` / `mass_scale`. If False, return raw NR-unit
+            values.
+        delta_t : float, optional
+            Uniform time spacing to resample onto when
+            `times_to_interpolate` is not given.
+
+        Returns
+        -------
+        time_grid : ndarray
+            Common time array.
+        massA, massB : ndarray
+            Areal mass of black holes A and B.
+        """
         massA = self.horizons.A.areal_mass
         massB = self.horizons.B.areal_mass
         source_time = self.horizons.A.time
@@ -299,6 +465,34 @@ class Horizon:
         return time_grid, massA, massB
 
     def common_areal_mass(self, times_to_interpolate=None, scale=True, delta_t=None):
+        """
+        Areal (irreducible) mass of the post-merger remnant horizon over time.
+
+        The areal mass is derived from the horizon's surface area rather
+        than its Christodoulou mass; see `common_area` for the area itself.
+
+        Parameters
+        ----------
+        times_to_interpolate : ndarray, optional
+            Times at which to interpolate the mass. If given, `delta_t` is
+            ignored, and the result is returned in native NR units
+            regardless of `scale` (unlike the `delta_t`/native-sampling
+            path below).
+        scale : bool, default True
+            If True, scale time and mass by the parent simulation's
+            `time_scale` / `mass_scale`. Only applied when
+            `times_to_interpolate` is not given; see note above.
+        delta_t : float, optional
+            Uniform time spacing to resample onto when
+            `times_to_interpolate` is not given.
+
+        Returns
+        -------
+        time_grid : ndarray
+            Time array.
+        massC : ndarray
+            Areal mass of the remnant horizon.
+        """
         massC = self.horizons.C.areal_mass
         source_time = self.horizons.C.time
 
@@ -316,6 +510,28 @@ class Horizon:
         return time_grid, massC
 
     def component_areas(self, times_to_interpolate=None, delta_t=None):
+        """
+        Surface area of each initial black hole's apparent horizon.
+
+        Computed from `component_areal_masses` via the areal-mass/area
+        relation `area = 16 * pi * mass**2`, then scaled by the parent
+        simulation's `area_scale` / `time_scale`.
+
+        Parameters
+        ----------
+        times_to_interpolate : ndarray, optional
+            Forwarded to `component_areal_masses`.
+        delta_t : float, optional
+            Forwarded to `component_areal_masses`; ignored if
+            `times_to_interpolate` is given.
+
+        Returns
+        -------
+        time : ndarray
+            Common time array, in the parent's unit system.
+        areaA, areaB : ndarray
+            Horizon area of black holes A and B, scaled by `area_scale`.
+        """
         time, massA, massB = self.component_areal_masses(
             times_to_interpolate=times_to_interpolate, delta_t=delta_t, scale=False
         )
@@ -326,6 +542,28 @@ class Horizon:
         return time, areaA, areaB
 
     def common_area(self, times_to_interpolate=None, delta_t=None):
+        """
+        Surface area of the post-merger remnant apparent horizon.
+
+        Computed from `common_areal_mass` via the areal-mass/area relation
+        `area = 16 * pi * mass**2`, then scaled by the parent simulation's
+        `area_scale` / `time_scale`.
+
+        Parameters
+        ----------
+        times_to_interpolate : ndarray, optional
+            Forwarded to `common_areal_mass`.
+        delta_t : float, optional
+            Forwarded to `common_areal_mass`; ignored if
+            `times_to_interpolate` is given.
+
+        Returns
+        -------
+        time : ndarray
+            Time array, in the parent's unit system.
+        areaC : ndarray
+            Horizon area of the remnant, scaled by `area_scale`.
+        """
         time, massC = self.common_areal_mass(
             times_to_interpolate=times_to_interpolate, delta_t=delta_t, scale=False
         )
@@ -338,6 +576,25 @@ class Horizon:
         self,
         times_to_interpolate=None,
     ):
+        """
+        Bekenstein-Hawking entropy of each initial black hole's horizon.
+
+        Computed from `component_areas` as `area / 4`, then scaled by the
+        parent simulation's `entropy_scale` (e.g. to convert to units of
+        `k_B` in `"SI"` units).
+
+        Parameters
+        ----------
+        times_to_interpolate : ndarray, optional
+            Forwarded to `component_areas`.
+
+        Returns
+        -------
+        time : ndarray
+            Common time array, in the parent's unit system.
+        entropyA, entropyB : ndarray
+            Entropy of black holes A and B.
+        """
         time, areaA, areaB = self.component_areas(
             times_to_interpolate=times_to_interpolate
         )
@@ -350,6 +607,25 @@ class Horizon:
         self,
         times_to_interpolate=None,
     ):
+        """
+        Bekenstein-Hawking entropy of the post-merger remnant horizon.
+
+        Computed from `common_area` as `area / 4`, then scaled by the
+        parent simulation's `entropy_scale` (e.g. to convert to units of
+        `k_B` in `"SI"` units).
+
+        Parameters
+        ----------
+        times_to_interpolate : ndarray, optional
+            Forwarded to `common_area`.
+
+        Returns
+        -------
+        time : ndarray
+            Time array, in the parent's unit system.
+        entropyC : ndarray
+            Entropy of the remnant horizon.
+        """
         time, areaC = self.common_area(times_to_interpolate=times_to_interpolate)
         entropyC = areaC / 4.0 * self.parent.entropy_scale
         return time, entropyC
@@ -359,6 +635,30 @@ class Horizon:
         times_to_interpolate=None,
         delta_t=None,
     ):
+        """
+        Dimensionless spin magnitude of each initial black hole over time.
+
+        Taken from the horizon's inertial-frame spin vector magnitude
+        (`chi_inertial_mag`), which is already dimensionless and so is not
+        rescaled, only the time axis is scaled by the parent simulation's
+        `time_scale`.
+
+        Parameters
+        ----------
+        times_to_interpolate : ndarray, optional
+            Times at which to interpolate both spins. If given, `delta_t`
+            is ignored.
+        delta_t : float, optional
+            Uniform time spacing to resample onto when
+            `times_to_interpolate` is not given.
+
+        Returns
+        -------
+        time_grid : ndarray
+            Common time array, in the parent's unit system.
+        chiA, chiB : ndarray
+            Dimensionless spin magnitude of black holes A and B.
+        """
         chiA = self.horizons.A.chi_inertial_mag
         chiB = self.horizons.B.chi_inertial_mag
         source_time = self.horizons.A.time
@@ -373,6 +673,30 @@ class Horizon:
         return time_grid * self.parent.time_scale, chiA, chiB
 
     def common_chi(self, times_to_interpolate=None, delta_t=None):
+        """
+        Dimensionless spin magnitude of the post-merger remnant over time.
+
+        Taken from the horizon's inertial-frame spin vector magnitude
+        (`chi_inertial_mag`), which is already dimensionless and so is not
+        rescaled, only the time axis is scaled by the parent simulation's
+        `time_scale`.
+
+        Parameters
+        ----------
+        times_to_interpolate : ndarray, optional
+            Times at which to interpolate the spin. If given, `delta_t` is
+            ignored.
+        delta_t : float, optional
+            Uniform time spacing to resample onto when
+            `times_to_interpolate` is not given.
+
+        Returns
+        -------
+        time_grid : ndarray
+            Time array, in the parent's unit system.
+        chiC : ndarray
+            Dimensionless spin magnitude of the remnant.
+        """
         chiC = self.horizons.C.chi_inertial_mag
         source_time = self.horizons.C.time
 
@@ -387,6 +711,85 @@ class Horizon:
 
 
 class SXSSimulation:
+    """
+    Convenience wrapper around a single SXS catalog simulation.
+
+    Loads a numerical-relativity simulation from the `sxs` package by its
+    catalog label and exposes its waveform modes, metadata, and apparent
+    horizon data (via a nested :class:`Horizon` instance at `self.horizon`)
+    with a consistent, configurable unit system and a flexible way to pick
+    the time window of the waveform to work with.
+
+    Parameters
+    ----------
+    simulation_label : str
+        SXS catalog label of the simulation to load, e.g. `"SXS:BBH:0305"`.
+        Passed directly to `sxs.load`. Required; raises `ValueError` if
+        left as `None`.
+
+    units : {"NR", "Geometric", "SI"}, default "NR"
+        Unit system used to scale all derived quantities (time, mass, area,
+        strain, angular momentum, entropy):
+
+        - `"NR"`: no rescaling; quantities are in the code units natively
+          used by the SXS catalog (total Christodoulou mass = 1).
+        - `"Geometric"`: quantities are rescaled to physical geometric units
+          (G = c = 1) set by `total_mass` (and `distance` for strain).
+        - `"SI"`: quantities are rescaled to SI units (seconds, kilograms,
+          metres, ...) using `total_mass` and `distance`.
+
+        Raises `ValueError` for any other value.
+
+    total_mass : float, default 1
+        Total binary mass in solar masses, `Ms`. Used to set the mass-to-time
+        conversion `MT = Ms * MTsun` and all scale factors when `units` is
+        `"Geometric"` or `"SI"`. Ignored when `units="NR"`.
+
+    distance : float, default 200
+        Luminosity distance to the source in Mpc, `DL`. Used together with
+        `total_mass` to set the strain scale factor. Ignored when
+        `units="NR"`.
+
+    initial_cutoff, final_cutoff : None, str, or float, default "reference" / "common_horizon"
+        Specification of the start/end of the time window used by
+        `waveform_mode` (and everything built on it). Resolved to a physical
+        time by `_resolve_time`:
+
+        - `None`: no cutoff (use the full available waveform).
+        - `float`/`int`: an explicit time, in the units set by `units`.
+        - `str`: a named event looked up from simulation metadata/waveform:
+          `"reference"` (reference time), `"common_horizon"` (time the
+          common apparent horizon forms), `"peak_amplitude"` (time of peak
+          waveform amplitude for the mode being requested), or
+          `"last_common_time"` (the earlier of the waveform's and the
+          common horizon's final times).
+
+    Attributes
+    ----------
+    sim : sxs.Simulation
+        The underlying simulation object returned by `sxs.load`.
+
+    waveform_modes : sxs.waveforms.WaveformModes
+        Alias of `sim.h`, the full set of spin-weighted spherical-harmonic
+        waveform modes.
+
+    metadata : sxs.metadata.Metadata
+        Alias of `sim.metadata`.
+
+    horizon : Horizon
+        Apparent-horizon data for this simulation; see :class:`Horizon`.
+
+    time_scale, length_scale, mass_scale, area_scale, angular_momentum_scale, strain_scale, entropy_scale : float
+        Multiplicative factors converting native NR-unit quantities into the
+        requested `units` system. All equal to `1.0` when `units="NR"`.
+
+    remnant_mass : float
+        Property; final remnant mass, scaled by `mass_scale`.
+
+    remnant_chi : float
+        Property; final remnant dimensionless spin magnitude (unscaled, as
+        it is already dimensionless).
+    """
 
     def __init__(
         self,
