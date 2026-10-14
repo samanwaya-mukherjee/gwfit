@@ -246,8 +246,9 @@ class Horizon:
     -----
     Methods come in "component" (returning both A and B quantities) and
     "common" (returning the C quantity) variants, covering Christodoulou
-    mass, horizon mass flux, areal mass, area, entropy (area / 4), and
-    dimensionless spin magnitude (`chi`).
+    mass, horizon mass flux, angular momentum, angular momentum flux, areal
+    mass, area, entropy (area / 4), and dimensionless spin magnitude
+    (`chi`).
     """
 
     def __init__(self, parent):
@@ -409,6 +410,167 @@ class Horizon:
             times_to_interpolate=times_to_interpolate
         )
         fluxC = np.gradient(massC, time)
+        return time, fluxC
+
+    def component_angular_momenta(
+        self,
+        times_to_interpolate=None,
+        delta_t=None,
+    ):
+        """
+        Spin angular momentum magnitude of each initial black hole over time.
+
+        Taken from the horizon's dimensionful inertial-frame spin vector
+        magnitude (`dimensionful_inertial_spin_mag`), scaled by the parent
+        simulation's `angular_momentum_scale`. The two horizons are returned
+        on a common time grid, sampled either at `delta_t` (resampling
+        horizon A's native time stamps) or at `times_to_interpolate`.
+
+        Parameters
+        ----------
+        times_to_interpolate : ndarray, optional
+            Times (already in the parent's unit system) at which to
+            interpolate both angular momenta. If given, `delta_t` is
+            ignored.
+        delta_t : float, optional
+            Uniform time spacing to resample onto when
+            `times_to_interpolate` is not given. If neither is given, the
+            horizon's native (irregular) time sampling is used.
+
+        Returns
+        -------
+        time_grid : ndarray
+            Common time array, in the parent's unit system.
+        J_A, J_B : ndarray
+            Spin angular momentum magnitude of black holes A and B, scaled
+            by `angular_momentum_scale`.
+        """
+        J_A = (
+            self.horizons.A.dimensionful_inertial_spin_mag
+            * self.parent.angular_momentum_scale
+        )
+        J_B = (
+            self.horizons.B.dimensionful_inertial_spin_mag
+            * self.parent.angular_momentum_scale
+        )
+        source_time = self.horizons.A.time * self.parent.time_scale
+
+        if times_to_interpolate is not None:
+            time_grid, J_A = match_time_grid(source_time, J_A, times_to_interpolate)
+            _, J_B = match_time_grid(source_time, J_B, times_to_interpolate)
+        else:
+            time_grid, J_A = resample(source_time, J_A, delta_t=delta_t)
+            _, J_B = resample(source_time, J_B, delta_t=delta_t)
+
+        return time_grid, J_A, J_B
+
+    def common_angular_momentum(
+        self,
+        times_to_interpolate=None,
+        delta_t=None,
+    ):
+        """
+        Spin angular momentum magnitude of the remnant horizon over time.
+
+        Taken from the horizon's dimensionful inertial-frame spin vector
+        magnitude (`dimensionful_inertial_spin_mag`), scaled by the parent
+        simulation's `angular_momentum_scale`.
+
+        Parameters
+        ----------
+        times_to_interpolate : ndarray, optional
+            Times (already in the parent's unit system) at which to
+            interpolate the angular momentum. If given, `delta_t` is
+            ignored.
+        delta_t : float, optional
+            Uniform time spacing to resample onto when
+            `times_to_interpolate` is not given. If neither is given, the
+            horizon's native (irregular) time sampling is used.
+
+        Returns
+        -------
+        time_grid : ndarray
+            Time array, in the parent's unit system.
+        J_C : ndarray
+            Spin angular momentum magnitude of the remnant, scaled by
+            `angular_momentum_scale`.
+        """
+        J_C = (
+            self.horizons.C.dimensionful_inertial_spin_mag
+            * self.parent.angular_momentum_scale
+        )
+        source_time = self.horizons.C.time * self.parent.time_scale
+
+        if times_to_interpolate is not None:
+            time_grid, J_C = match_time_grid(source_time, J_C, times_to_interpolate)
+        else:
+            time_grid, J_C = resample(source_time, J_C, delta_t=delta_t)
+
+        return time_grid, J_C
+
+    def component_angular_momentum_fluxes(
+        self, times_to_interpolate=None, delta_t=None
+    ):
+        """
+        Rate of change of each initial black hole's angular momentum.
+
+        Computed as the numerical time-derivative (`numpy.gradient`) of
+        `component_angular_momenta`, i.e. the angular-momentum flux absorbed
+        by each horizon over the inspiral.
+
+        Parameters
+        ----------
+        times_to_interpolate : ndarray, optional
+            Forwarded to `component_angular_momenta`.
+        delta_t : float, optional
+            Forwarded to `component_angular_momenta`; ignored if
+            `times_to_interpolate` is given.
+
+        Returns
+        -------
+        time : ndarray
+            Common time array, in the parent's unit system.
+        fluxA, fluxB : ndarray
+            dJ/dt for black holes A and B.
+        """
+        if times_to_interpolate is not None:
+            time, J_A, J_B = self.component_angular_momenta(
+                times_to_interpolate=times_to_interpolate
+            )
+        else:
+            time, J_A, J_B = self.component_angular_momenta(delta_t=delta_t)
+
+        fluxA = np.gradient(J_A, time)
+        fluxB = np.gradient(J_B, time)
+        return time, fluxA, fluxB
+
+    def common_angular_momentum_flux(self, times_to_interpolate=None, delta_t=None):
+        """
+        Rate of change of the remnant horizon's angular momentum.
+
+        Computed as the numerical time-derivative (`numpy.gradient`) of
+        `common_angular_momentum`, i.e. the angular-momentum flux absorbed
+        by the merged remnant horizon after merger.
+
+        Parameters
+        ----------
+        times_to_interpolate : ndarray, optional
+            Forwarded to `common_angular_momentum`.
+        delta_t : float, optional
+            Forwarded to `common_angular_momentum`; ignored if
+            `times_to_interpolate` is given.
+
+        Returns
+        -------
+        time : ndarray
+            Time array, in the parent's unit system.
+        fluxC : ndarray
+            dJ/dt for the remnant horizon.
+        """
+        time, J_C = self.common_angular_momentum(
+            times_to_interpolate=times_to_interpolate
+        )
+        fluxC = np.gradient(J_C, time)
         return time, fluxC
 
     def component_areal_masses(
@@ -776,9 +938,12 @@ class SXSSimulation:
     horizon : Horizon
         Apparent-horizon data for this simulation; see :class:`Horizon`.
 
-    time_scale, length_scale, mass_scale, area_scale, angular_momentum_scale, strain_scale, entropy_scale : float
+    time_scale, length_scale, mass_scale, area_scale, angular_momentum_scale, strain_scale, entropy_scale, energy_scale : float
         Multiplicative factors converting native NR-unit quantities into the
         requested `units` system. All equal to `1.0` when `units="NR"`.
+        `energy_scale` is the rest-mass-energy equivalent of `mass_scale`
+        (`mass_scale * c**2` in `"SI"` units; identical to `mass_scale`
+        itself in `"Geometric"` units, where `c = 1`).
 
     remnant_mass : float
         Property; final remnant mass, scaled by `mass_scale`.
@@ -821,6 +986,7 @@ class SXSSimulation:
             self.angular_momentum_scale = 1.0
             self.strain_scale = 1.0
             self.entropy_scale = 1.0
+            self.energy_scale = 1.0
 
         elif units == "Geometric":
             self.time_scale = self.MT
@@ -830,6 +996,7 @@ class SXSSimulation:
             self.angular_momentum_scale = self.MT**2
             self.strain_scale = (self.Ms / self.DL) * const.strain_fac
             self.entropy_scale = 1.0
+            self.energy_scale = self.MT
 
         elif units == "SI":
             self.time_scale = self.MT
@@ -843,6 +1010,7 @@ class SXSSimulation:
             self.entropy_scale = (
                 const.kBoltzmann * const.cLight**3 / (const.GNewton * const.hbar)
             )
+            self.energy_scale = self.mass_scale * const.cLight**2
 
         else:
             raise ValueError("units must be 'NR', 'Geometric', or 'SI'.")
@@ -950,32 +1118,121 @@ class SXSSimulation:
 
         return time_resampled, hlm_resampled
 
-    def gw_flux(
+    def gw_energy_flux(
         self,
         delta_t=None,
         ell_min=2,
         ell_max=8,
     ):
         """
-        Compute the gravitational wave flux from the SXS simulation."""
-        gw_flux = None
+        Compute the gravitational-wave energy flux from the SXS simulation.
+
+        Uses the standard multipolar expression for the energy flux (e.g.
+        Ruiz, Alcubierre, Bruegmann & Takahashi 2008, Gen. Relativ. Gravit.
+        40, 1705):
+
+            dE/dt = (1 / (16*pi)) * sum_{l,m} |dh_lm/dt|**2
+
+        summed over the same range of modes as `gw_angular_momentum_flux`.
+
+        Parameters
+        ----------
+        delta_t : float, optional
+            Time step used when resampling each mode; forwarded to
+            `waveform_mode`.
+        ell_min, ell_max : int
+            Range of `l` values (inclusive) to include in the mode sum.
+
+        Returns
+        -------
+        t_nr : ndarray
+            Time array matching the resampled waveform modes.
+        gw_flux : ndarray
+            Gravitational-wave energy flux, dE/dt.
+        """
+        gw_energy_flux = None
         for ell in range(ell_min, ell_max + 1):
             for em in range(-ell, ell + 1):
                 time, hlm = self.waveform_mode(mode=(ell, em), delta_t=delta_t)
-                if gw_flux is None:
-                    gw_flux = np.zeros_like(time)
+                if gw_energy_flux is None:
+                    gw_energy_flux = np.zeros_like(time)
                     t_nr = time.copy()
 
                 hlm_dot = np.gradient(hlm, time)
 
-                gw_flux += np.abs(hlm_dot) ** 2
+                gw_energy_flux += np.abs(hlm_dot) ** 2
 
-        gw_flux *= 1.0 / (16.0 * np.pi)
+        gw_energy_flux *= 1.0 / (16.0 * np.pi)
 
-        if self.units == "SI":
-            gw_flux *= const.cLight**5 / const.GNewton  # Convert to Watts
+        # hlm and time are already physically scaled by waveform_mode
+        # (strain_scale, time_scale); energy_scale / time_scale converts the
+        # resulting 1/time**2 sum into power in the requested unit system
+        # (a no-op for "NR", and equal to cLight**5 / GNewton for "SI").
+        gw_energy_flux *= self.energy_scale / self.time_scale
 
-        return t_nr, gw_flux
+        return t_nr, gw_energy_flux
+
+    def gw_angular_momentum_flux(
+        self,
+        delta_t=None,
+        ell_min=2,
+        ell_max=8,
+    ):
+        """
+        Compute the z-component of the gravitational-wave angular momentum
+        flux from the SXS simulation.
+
+        Uses the standard multipolar expression for the angular momentum
+        radiated about the z-axis (e.g. Ruiz, Alcubierre, Bruegmann &
+        Takahashi 2008, Gen. Relativ. Gravit. 40, 1705):
+
+            dJ_z/dt = (1 / (16*pi)) * sum_{l,m} m * Im[ h_lm * conj(dh_lm/dt) ]
+
+        summed over the same range of modes as `gw_energy_flux`. Only the
+        z-component is computed, since it is the only component that
+        reduces to a simple per-mode sum; it is also the physically
+        relevant one for non-precessing (aligned-spin) systems, where it
+        coincides with the total radiated angular momentum.
+
+        Parameters
+        ----------
+        delta_t : float, optional
+            Time step used when resampling each mode; forwarded to
+            `waveform_mode`.
+        ell_min, ell_max : int
+            Range of `l` values (inclusive) to include in the mode sum.
+
+        Returns
+        -------
+        t_nr : ndarray
+            Time array matching the resampled waveform modes.
+        gw_angular_momentum_flux : ndarray
+            z-component of the angular momentum flux radiated in
+            gravitational waves, dJ_z/dt.
+        """
+        gw_angular_momentum_flux = None
+        for ell in range(ell_min, ell_max + 1):
+            for em in range(-ell, ell + 1):
+                time, hlm = self.waveform_mode(mode=(ell, em), delta_t=delta_t)
+                if gw_angular_momentum_flux is None:
+                    gw_angular_momentum_flux = np.zeros_like(time)
+                    t_nr = time.copy()
+
+                hlm_dot = np.gradient(hlm, time)
+
+                gw_angular_momentum_flux += em * np.imag(hlm * np.conj(hlm_dot))
+
+        gw_angular_momentum_flux *= 1.0 / (16.0 * np.pi)
+
+        # hlm and time are already physically scaled by waveform_mode
+        # (strain_scale, time_scale); angular_momentum_scale / time_scale
+        # converts the resulting 1/time sum into angular momentum per unit
+        # time in the requested unit system (a no-op for "NR", and exactly
+        # equal to energy_scale, since dJ/dt has the same physical
+        # dimension as energy).
+        gw_angular_momentum_flux *= self.angular_momentum_scale / self.time_scale
+
+        return t_nr, gw_angular_momentum_flux
 
     def mode_phase(
         self,
