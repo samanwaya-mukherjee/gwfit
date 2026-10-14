@@ -475,13 +475,11 @@ class Horizon:
         ----------
         times_to_interpolate : ndarray, optional
             Times at which to interpolate the mass. If given, `delta_t` is
-            ignored, and the result is returned in native NR units
-            regardless of `scale` (unlike the `delta_t`/native-sampling
-            path below).
+            ignored.
         scale : bool, default True
             If True, scale time and mass by the parent simulation's
-            `time_scale` / `mass_scale`. Only applied when
-            `times_to_interpolate` is not given; see note above.
+            `time_scale` / `mass_scale`. If False, return raw NR-unit
+            values.
         delta_t : float, optional
             Uniform time spacing to resample onto when
             `times_to_interpolate` is not given.
@@ -500,7 +498,6 @@ class Horizon:
 
         if times_to_interpolate is not None:
             time_grid, massC = match_time_grid(source_time, massC, times_to_interpolate)
-            return time_grid, massC
         else:
             time_grid, massC = resample(source_time, massC, delta_t=delta_t)
         if scale:
