@@ -50,7 +50,7 @@ for sim_label in [f"SXS:BBH:{label_input}"]:
     q = sim_prem.metadata.reference_mass_ratio
 
     twf, gw_freq = sim_prem.mode_frequency(mode=(2, 2))
-    _, gw_flux = sim_prem.gw_flux(ell_max=8)
+    _, gw_flux = sim_prem.gw_energy_flux(ell_max=8)
     orb_freq = gw_freq / 2.0
     # plt.plot(twf,gw_freq)
     t, fA, fB = sim_prem.horizon.component_horizon_fluxes(times_to_interpolate=twf)

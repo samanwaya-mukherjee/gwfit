@@ -103,7 +103,7 @@ def save_sxs_data_to_h5(labels, file_path):
 
             # Extract frequencies and fluxes
             twf, gw_freq = sim_prem.mode_frequency(mode=(2, 2))
-            _, gw_flux = sim_prem.gw_flux(ell_max=8)
+            _, gw_flux = sim_prem.gw_energy_flux(ell_max=8)
             t, fA, fB = sim_prem.horizon.component_horizon_fluxes(
                 times_to_interpolate=twf
             )
@@ -214,11 +214,12 @@ class Horizon:
     the ``sxs`` package), exposing the trajectories of the two initial
     black-hole horizons ("component" quantities, labelled A and B) and the
     post-merger remnant horizon ("common" quantities, labelled C). All
-    quantities are returned either on their native (possibly irregular) NR
-    time sampling resampled to a uniform grid via `delta_t`, or interpolated
-    onto an arbitrary set of times via `times_to_interpolate`, and are scaled
-    according to the unit system (`"NR"`, `"Geometric"`, or `"SI"`) of the
-    parent :class:`SXSSimulation`.
+    quantities are returned on a uniform time grid by default (spacing equal
+    to the coarsest native step), on a uniform grid of spacing `delta_t`, or
+    interpolated onto an arbitrary set of times via `times_to_interpolate`.
+    Horizons A and B are each interpolated on their own time stamps. All
+    quantities are scaled according to the unit system (`"NR"`,
+    `"Geometric"`, or `"SI"`) of the parent :class:`SXSSimulation`.
 
     Parameters
     ----------
@@ -264,6 +265,72 @@ class Horizon:
     def end_time(self):
         return self.horizons.C.time[-1] * self.parent.time_scale
 
+    @staticmethod
+    def _sample(series, times_to_interpolate=None, delta_t=None, kind="cubic"):
+        """
+        Sample one or more (time, data) series on a single common grid.
+
+        Each series is interpolated on its own time axis, so horizons with
+        different time stamps (e.g. A and B) are handled correctly. The grid
+        is restricted to the time range covered by every series.
+
+        Grid selection:
+
+        - `times_to_interpolate` given: those times (within the overlap).
+        - else `delta_t` given: uniform grid with that spacing.
+        - else: uniform grid with the coarsest native time step of the
+          first series.
+
+        Returns
+        -------
+        grid : ndarray
+        data : list of ndarray
+            One array per input series, sampled on `grid`.
+        """
+        lo = max(t[0] for t, _ in series)
+        hi = min(t[-1] for t, _ in series)
+
+        if times_to_interpolate is not None:
+            times = np.asarray(times_to_interpolate, dtype=float)
+            grid = times[(times >= lo) & (times <= hi)]
+        else:
+            if delta_t is None:
+                delta_t = np.diff(series[0][0]).max()
+            grid = np.arange(lo, hi, delta_t)
+
+        data = []
+        for t, d in series:
+            if np.array_equal(t, grid):
+                data.append(np.array(d))
+            else:
+                data.append(interp1d(t, d, kind=kind)(grid))
+        return grid, data
+
+    def _pair(self, name, times_to_interpolate, delta_t, scale_time, scale_data=1.0):
+        """Sample attribute `name` of horizons A and B on a common grid."""
+        ts = self.parent.time_scale if scale_time else 1.0
+        A, B = self.horizons.A, self.horizons.B
+        grid, (dA, dB) = self._sample(
+            [
+                (A.time * ts, getattr(A, name) * scale_data),
+                (B.time * ts, getattr(B, name) * scale_data),
+            ],
+            times_to_interpolate,
+            delta_t,
+        )
+        return grid, dA, dB
+
+    def _single(self, name, times_to_interpolate, delta_t, scale_time, scale_data=1.0):
+        """Sample attribute `name` of the common horizon C."""
+        ts = self.parent.time_scale if scale_time else 1.0
+        C = self.horizons.C
+        grid, (dC,) = self._sample(
+            [(C.time * ts, getattr(C, name) * scale_data)],
+            times_to_interpolate,
+            delta_t,
+        )
+        return grid, dC
+
     def component_christodoulou_masses(
         self,
         times_to_interpolate=None,
@@ -272,10 +339,10 @@ class Horizon:
         """
         Christodoulou mass of each initial black hole (A and B) over time.
 
-        The two horizons are returned on a common time grid, sampled either
-        at `delta_t` (resampling horizon A's native time stamps) or at
-        `times_to_interpolate`. Masses and time are scaled by the parent
-        simulation's `mass_scale` / `time_scale`.
+        Each horizon is interpolated on its own time stamps onto a common
+        grid: `times_to_interpolate` if given, else a uniform grid with
+        spacing `delta_t`, else a uniform grid at the coarsest native step of
+        horizon A. Masses and time are scaled by the parent's `mass_scale` / `time_scale`.
 
         Parameters
         ----------
@@ -283,9 +350,9 @@ class Horizon:
             Times (already in the parent's unit system) at which to
             interpolate both masses. If given, `delta_t` is ignored.
         delta_t : float, optional
-            Uniform time spacing to resample onto when
+            Uniform time spacing (parent's unit system) used when
             `times_to_interpolate` is not given. If neither is given, the
-            horizon's native (irregular) time sampling is used.
+            coarsest native time step is used.
 
         Returns
         -------
@@ -295,18 +362,13 @@ class Horizon:
             Christodoulou mass of black holes A and B, scaled by
             `mass_scale`.
         """
-        massA = self.horizons.A.christodoulou_mass * self.parent.mass_scale
-        massB = self.horizons.B.christodoulou_mass * self.parent.mass_scale
-        source_time = self.horizons.A.time * self.parent.time_scale
-
-        if times_to_interpolate is not None:
-            time_grid, massA = match_time_grid(source_time, massA, times_to_interpolate)
-            _, massB = match_time_grid(source_time, massB, times_to_interpolate)
-        else:
-            time_grid, massA = resample(source_time, massA, delta_t=delta_t)
-            _, massB = resample(source_time, massB, delta_t=delta_t)
-
-        return time_grid, massA, massB
+        return self._pair(
+            "christodoulou_mass",
+            times_to_interpolate,
+            delta_t,
+            True,
+            self.parent.mass_scale,
+        )
 
     def common_christodoulou_mass(
         self,
@@ -316,19 +378,18 @@ class Horizon:
         """
         Christodoulou mass of the post-merger remnant horizon (C) over time.
 
-        Sampled either at `delta_t` (resampling horizon C's native time
-        stamps) or at `times_to_interpolate`. Mass and time are scaled by
-        the parent simulation's `mass_scale` / `time_scale`.
+        Sampled at `times_to_interpolate`, else on a uniform `delta_t` grid,
+        else on a uniform grid at the coarsest native time step. Mass and time are scaled by the
+        parent's `mass_scale` / `time_scale`.
 
         Parameters
         ----------
         times_to_interpolate : ndarray, optional
-            Times (already in the parent's unit system) at which to
-            interpolate the mass. If given, `delta_t` is ignored.
+            Times (parent's unit system) at which to interpolate. If given,
+            `delta_t` is ignored.
         delta_t : float, optional
-            Uniform time spacing to resample onto when
-            `times_to_interpolate` is not given. If neither is given, the
-            horizon's native (irregular) time sampling is used.
+            Uniform time spacing (parent's unit system). If None, the coarsest native
+            time step is used.
 
         Returns
         -------
@@ -338,31 +399,25 @@ class Horizon:
             Christodoulou mass of the remnant horizon, scaled by
             `mass_scale`.
         """
-        massC = self.horizons.C.christodoulou_mass * self.parent.mass_scale
-        source_time = self.horizons.C.time * self.parent.time_scale
-
-        if times_to_interpolate is not None:
-            time_grid, massC = match_time_grid(source_time, massC, times_to_interpolate)
-        else:
-            time_grid, massC = resample(source_time, massC, delta_t=delta_t)
-
-        return time_grid, massC
+        return self._single(
+            "christodoulou_mass",
+            times_to_interpolate,
+            delta_t,
+            True,
+            self.parent.mass_scale,
+        )
 
     def component_horizon_fluxes(self, times_to_interpolate=None, delta_t=None):
         """
         Rate of change of each initial black hole's Christodoulou mass.
 
         Computed as the numerical time-derivative (`numpy.gradient`) of
-        `component_christodoulou_masses`, i.e. the mass flux absorbed by
-        each horizon (e.g. from tidal/horizon heating) over the inspiral.
+        `component_christodoulou_masses`.
 
         Parameters
         ----------
-        times_to_interpolate : ndarray, optional
+        times_to_interpolate, delta_t
             Forwarded to `component_christodoulou_masses`.
-        delta_t : float, optional
-            Forwarded to `component_christodoulou_masses`; ignored if
-            `times_to_interpolate` is given.
 
         Returns
         -------
@@ -371,33 +426,22 @@ class Horizon:
         fluxA, fluxB : ndarray
             d(mass)/dt for black holes A and B.
         """
-        if times_to_interpolate is not None:
-            time, massA, massB = self.component_christodoulou_masses(
-                times_to_interpolate=times_to_interpolate
-            )
-
-        else:
-            time, massA, massB = self.component_christodoulou_masses(delta_t=delta_t)
-
-        fluxA = np.gradient(massA, time)
-        fluxB = np.gradient(massB, time)
-        return time, fluxA, fluxB
+        time, massA, massB = self.component_christodoulou_masses(
+            times_to_interpolate=times_to_interpolate, delta_t=delta_t
+        )
+        return time, np.gradient(massA, time), np.gradient(massB, time)
 
     def common_horizon_flux(self, times_to_interpolate=None, delta_t=None):
         """
         Rate of change of the remnant horizon's Christodoulou mass.
 
         Computed as the numerical time-derivative (`numpy.gradient`) of
-        `common_christodoulou_mass`, i.e. the mass flux absorbed by the
-        merged remnant horizon after merger (e.g. from ringdown radiation).
+        `common_christodoulou_mass`.
 
         Parameters
         ----------
-        times_to_interpolate : ndarray, optional
+        times_to_interpolate, delta_t
             Forwarded to `common_christodoulou_mass`.
-        delta_t : float, optional
-            Forwarded to `common_christodoulou_mass`; ignored if
-            `times_to_interpolate` is given.
 
         Returns
         -------
@@ -407,10 +451,9 @@ class Horizon:
             d(mass)/dt for the remnant horizon.
         """
         time, massC = self.common_christodoulou_mass(
-            times_to_interpolate=times_to_interpolate
+            times_to_interpolate=times_to_interpolate, delta_t=delta_t
         )
-        fluxC = np.gradient(massC, time)
-        return time, fluxC
+        return time, np.gradient(massC, time)
 
     def component_angular_momenta(
         self,
@@ -420,49 +463,33 @@ class Horizon:
         """
         Spin angular momentum magnitude of each initial black hole over time.
 
-        Taken from the horizon's dimensionful inertial-frame spin vector
-        magnitude (`dimensionful_inertial_spin_mag`), scaled by the parent
-        simulation's `angular_momentum_scale`. The two horizons are returned
-        on a common time grid, sampled either at `delta_t` (resampling
-        horizon A's native time stamps) or at `times_to_interpolate`.
+        Taken from `dimensionful_inertial_spin_mag`, scaled by the parent's
+        `angular_momentum_scale`. Sampling follows
+        `component_christodoulou_masses`.
 
         Parameters
         ----------
         times_to_interpolate : ndarray, optional
-            Times (already in the parent's unit system) at which to
-            interpolate both angular momenta. If given, `delta_t` is
-            ignored.
+            Times (parent's unit system) at which to interpolate. If given,
+            `delta_t` is ignored.
         delta_t : float, optional
-            Uniform time spacing to resample onto when
-            `times_to_interpolate` is not given. If neither is given, the
-            horizon's native (irregular) time sampling is used.
+            Uniform time spacing (parent's unit system). If None, the coarsest native
+            time step is used.
 
         Returns
         -------
         time_grid : ndarray
             Common time array, in the parent's unit system.
         J_A, J_B : ndarray
-            Spin angular momentum magnitude of black holes A and B, scaled
-            by `angular_momentum_scale`.
+            Spin angular momentum magnitude of black holes A and B.
         """
-        J_A = (
-            self.horizons.A.dimensionful_inertial_spin_mag
-            * self.parent.angular_momentum_scale
+        return self._pair(
+            "dimensionful_inertial_spin_mag",
+            times_to_interpolate,
+            delta_t,
+            True,
+            self.parent.angular_momentum_scale,
         )
-        J_B = (
-            self.horizons.B.dimensionful_inertial_spin_mag
-            * self.parent.angular_momentum_scale
-        )
-        source_time = self.horizons.A.time * self.parent.time_scale
-
-        if times_to_interpolate is not None:
-            time_grid, J_A = match_time_grid(source_time, J_A, times_to_interpolate)
-            _, J_B = match_time_grid(source_time, J_B, times_to_interpolate)
-        else:
-            time_grid, J_A = resample(source_time, J_A, delta_t=delta_t)
-            _, J_B = resample(source_time, J_B, delta_t=delta_t)
-
-        return time_grid, J_A, J_B
 
     def common_angular_momentum(
         self,
@@ -472,41 +499,32 @@ class Horizon:
         """
         Spin angular momentum magnitude of the remnant horizon over time.
 
-        Taken from the horizon's dimensionful inertial-frame spin vector
-        magnitude (`dimensionful_inertial_spin_mag`), scaled by the parent
-        simulation's `angular_momentum_scale`.
+        Taken from `dimensionful_inertial_spin_mag`, scaled by the parent's
+        `angular_momentum_scale`.
 
         Parameters
         ----------
         times_to_interpolate : ndarray, optional
-            Times (already in the parent's unit system) at which to
-            interpolate the angular momentum. If given, `delta_t` is
-            ignored.
+            Times (parent's unit system) at which to interpolate. If given,
+            `delta_t` is ignored.
         delta_t : float, optional
-            Uniform time spacing to resample onto when
-            `times_to_interpolate` is not given. If neither is given, the
-            horizon's native (irregular) time sampling is used.
+            Uniform time spacing (parent's unit system). If None, the coarsest native
+            time step is used.
 
         Returns
         -------
         time_grid : ndarray
             Time array, in the parent's unit system.
         J_C : ndarray
-            Spin angular momentum magnitude of the remnant, scaled by
-            `angular_momentum_scale`.
+            Spin angular momentum magnitude of the remnant.
         """
-        J_C = (
-            self.horizons.C.dimensionful_inertial_spin_mag
-            * self.parent.angular_momentum_scale
+        return self._single(
+            "dimensionful_inertial_spin_mag",
+            times_to_interpolate,
+            delta_t,
+            True,
+            self.parent.angular_momentum_scale,
         )
-        source_time = self.horizons.C.time * self.parent.time_scale
-
-        if times_to_interpolate is not None:
-            time_grid, J_C = match_time_grid(source_time, J_C, times_to_interpolate)
-        else:
-            time_grid, J_C = resample(source_time, J_C, delta_t=delta_t)
-
-        return time_grid, J_C
 
     def component_angular_momentum_fluxes(
         self, times_to_interpolate=None, delta_t=None
@@ -514,17 +532,12 @@ class Horizon:
         """
         Rate of change of each initial black hole's angular momentum.
 
-        Computed as the numerical time-derivative (`numpy.gradient`) of
-        `component_angular_momenta`, i.e. the angular-momentum flux absorbed
-        by each horizon over the inspiral.
+        Computed as `numpy.gradient` of `component_angular_momenta`.
 
         Parameters
         ----------
-        times_to_interpolate : ndarray, optional
+        times_to_interpolate, delta_t
             Forwarded to `component_angular_momenta`.
-        delta_t : float, optional
-            Forwarded to `component_angular_momenta`; ignored if
-            `times_to_interpolate` is given.
 
         Returns
         -------
@@ -533,32 +546,21 @@ class Horizon:
         fluxA, fluxB : ndarray
             dJ/dt for black holes A and B.
         """
-        if times_to_interpolate is not None:
-            time, J_A, J_B = self.component_angular_momenta(
-                times_to_interpolate=times_to_interpolate
-            )
-        else:
-            time, J_A, J_B = self.component_angular_momenta(delta_t=delta_t)
-
-        fluxA = np.gradient(J_A, time)
-        fluxB = np.gradient(J_B, time)
-        return time, fluxA, fluxB
+        time, J_A, J_B = self.component_angular_momenta(
+            times_to_interpolate=times_to_interpolate, delta_t=delta_t
+        )
+        return time, np.gradient(J_A, time), np.gradient(J_B, time)
 
     def common_angular_momentum_flux(self, times_to_interpolate=None, delta_t=None):
         """
         Rate of change of the remnant horizon's angular momentum.
 
-        Computed as the numerical time-derivative (`numpy.gradient`) of
-        `common_angular_momentum`, i.e. the angular-momentum flux absorbed
-        by the merged remnant horizon after merger.
+        Computed as `numpy.gradient` of `common_angular_momentum`.
 
         Parameters
         ----------
-        times_to_interpolate : ndarray, optional
+        times_to_interpolate, delta_t
             Forwarded to `common_angular_momentum`.
-        delta_t : float, optional
-            Forwarded to `common_angular_momentum`; ignored if
-            `times_to_interpolate` is given.
 
         Returns
         -------
@@ -568,10 +570,9 @@ class Horizon:
             dJ/dt for the remnant horizon.
         """
         time, J_C = self.common_angular_momentum(
-            times_to_interpolate=times_to_interpolate
+            times_to_interpolate=times_to_interpolate, delta_t=delta_t
         )
-        fluxC = np.gradient(J_C, time)
-        return time, fluxC
+        return time, np.gradient(J_C, time)
 
     def component_areal_masses(
         self,
@@ -582,11 +583,6 @@ class Horizon:
         """
         Areal (irreducible) mass of each initial black hole over time.
 
-        The areal mass is derived from the horizon's surface area rather
-        than its Christodoulou mass; see `component_areas` for the area
-        itself. The two horizons are returned on a common time grid, sampled
-        either at `delta_t` or at `times_to_interpolate`.
-
         Parameters
         ----------
         times_to_interpolate : ndarray, optional
@@ -594,12 +590,11 @@ class Horizon:
             is ignored. Interpreted in the parent's unit system if `scale`
             is True, otherwise in native NR units.
         scale : bool, default True
-            If True, scale time and mass by the parent simulation's
-            `time_scale` / `mass_scale`. If False, return raw NR-unit
-            values.
+            If True, time and mass are in the parent's unit system
+            (`time_scale` / `mass_scale`). If False, native NR units.
         delta_t : float, optional
-            Uniform time spacing to resample onto when
-            `times_to_interpolate` is not given.
+            Uniform time spacing (same units as the returned time). If None, the coarsest native
+            time step is used.
 
         Returns
         -------
@@ -608,43 +603,30 @@ class Horizon:
         massA, massB : ndarray
             Areal mass of black holes A and B.
         """
-        massA = self.horizons.A.areal_mass
-        massB = self.horizons.B.areal_mass
-        source_time = self.horizons.A.time
-
-        if times_to_interpolate is not None:
-            time_grid, massA = match_time_grid(source_time, massA, times_to_interpolate)
-            _, massB = match_time_grid(source_time, massB, times_to_interpolate)
-        else:
-            time_grid, massA = resample(source_time, massA, delta_t=delta_t)
-            _, massB = resample(source_time, massB, delta_t=delta_t)
-
-        if scale:
-            time_grid *= self.parent.time_scale
-            massA *= self.parent.mass_scale
-            massB *= self.parent.mass_scale
-
-        return time_grid, massA, massB
+        return self._pair(
+            "areal_mass",
+            times_to_interpolate,
+            delta_t,
+            scale,
+            self.parent.mass_scale if scale else 1.0,
+        )
 
     def common_areal_mass(self, times_to_interpolate=None, scale=True, delta_t=None):
         """
-        Areal (irreducible) mass of the post-merger remnant horizon over time.
-
-        The areal mass is derived from the horizon's surface area rather
-        than its Christodoulou mass; see `common_area` for the area itself.
+        Areal (irreducible) mass of the post-merger remnant horizon.
 
         Parameters
         ----------
         times_to_interpolate : ndarray, optional
-            Times at which to interpolate the mass. If given, `delta_t` is
-            ignored.
+            Times at which to interpolate. If given, `delta_t` is ignored.
+            Interpreted in the parent's unit system if `scale` is True,
+            otherwise in native NR units.
         scale : bool, default True
-            If True, scale time and mass by the parent simulation's
-            `time_scale` / `mass_scale`. If False, return raw NR-unit
-            values.
+            If True, time and mass are in the parent's unit system. If
+            False, native NR units.
         delta_t : float, optional
-            Uniform time spacing to resample onto when
-            `times_to_interpolate` is not given.
+            Uniform time spacing (same units as the returned time). If None, the coarsest native
+            time step is used.
 
         Returns
         -------
@@ -653,36 +635,28 @@ class Horizon:
         massC : ndarray
             Areal mass of the remnant horizon.
         """
-        massC = self.horizons.C.areal_mass
-        source_time = self.horizons.C.time
-
-        time_grid = source_time.copy()
-
-        if times_to_interpolate is not None:
-            time_grid, massC = match_time_grid(source_time, massC, times_to_interpolate)
-        else:
-            time_grid, massC = resample(source_time, massC, delta_t=delta_t)
-        if scale:
-            time_grid *= self.parent.time_scale
-            massC *= self.parent.mass_scale
-
-        return time_grid, massC
+        return self._single(
+            "areal_mass",
+            times_to_interpolate,
+            delta_t,
+            scale,
+            self.parent.mass_scale if scale else 1.0,
+        )
 
     def component_areas(self, times_to_interpolate=None, delta_t=None):
         """
         Surface area of each initial black hole's apparent horizon.
 
-        Computed from `component_areal_masses` via the areal-mass/area
-        relation `area = 16 * pi * mass**2`, then scaled by the parent
-        simulation's `area_scale` / `time_scale`.
+        Computed from the areal mass as `area = 16 * pi * mass**2`, scaled
+        by the parent's `area_scale`. Time is in the parent's unit system.
 
         Parameters
         ----------
         times_to_interpolate : ndarray, optional
-            Forwarded to `component_areal_masses`.
+            Times (parent's unit system). If given, `delta_t` is ignored.
         delta_t : float, optional
-            Forwarded to `component_areal_masses`; ignored if
-            `times_to_interpolate` is given.
+            Uniform time spacing (parent's unit system). If None, the coarsest native
+            time step is used.
 
         Returns
         -------
@@ -691,30 +665,27 @@ class Horizon:
         areaA, areaB : ndarray
             Horizon area of black holes A and B, scaled by `area_scale`.
         """
-        time, massA, massB = self.component_areal_masses(
-            times_to_interpolate=times_to_interpolate, delta_t=delta_t, scale=False
+        time, massA, massB = self._pair(
+            "areal_mass", times_to_interpolate, delta_t, True
         )
         areaA = 16 * np.pi * massA**2 * self.parent.area_scale
         areaB = 16 * np.pi * massB**2 * self.parent.area_scale
-        time *= self.parent.time_scale
-
         return time, areaA, areaB
 
     def common_area(self, times_to_interpolate=None, delta_t=None):
         """
         Surface area of the post-merger remnant apparent horizon.
 
-        Computed from `common_areal_mass` via the areal-mass/area relation
-        `area = 16 * pi * mass**2`, then scaled by the parent simulation's
-        `area_scale` / `time_scale`.
+        Computed from the areal mass as `area = 16 * pi * mass**2`, scaled
+        by the parent's `area_scale`. Time is in the parent's unit system.
 
         Parameters
         ----------
         times_to_interpolate : ndarray, optional
-            Forwarded to `common_areal_mass`.
+            Times (parent's unit system). If given, `delta_t` is ignored.
         delta_t : float, optional
-            Forwarded to `common_areal_mass`; ignored if
-            `times_to_interpolate` is given.
+            Uniform time spacing (parent's unit system). If None, the coarsest native
+            time step is used.
 
         Returns
         -------
@@ -723,28 +694,24 @@ class Horizon:
         areaC : ndarray
             Horizon area of the remnant, scaled by `area_scale`.
         """
-        time, massC = self.common_areal_mass(
-            times_to_interpolate=times_to_interpolate, delta_t=delta_t, scale=False
-        )
+        time, massC = self._single("areal_mass", times_to_interpolate, delta_t, True)
         areaC = 16 * np.pi * massC**2 * self.parent.area_scale
-        time *= self.parent.time_scale
-
         return time, areaC
 
     def component_entropies(
         self,
         times_to_interpolate=None,
+        delta_t=None,
     ):
         """
         Bekenstein-Hawking entropy of each initial black hole's horizon.
 
         Computed from `component_areas` as `area / 4`, then scaled by the
-        parent simulation's `entropy_scale` (e.g. to convert to units of
-        `k_B` in `"SI"` units).
+        parent's `entropy_scale` (e.g. to units of `k_B`-based SI entropy).
 
         Parameters
         ----------
-        times_to_interpolate : ndarray, optional
+        times_to_interpolate, delta_t
             Forwarded to `component_areas`.
 
         Returns
@@ -755,7 +722,7 @@ class Horizon:
             Entropy of black holes A and B.
         """
         time, areaA, areaB = self.component_areas(
-            times_to_interpolate=times_to_interpolate
+            times_to_interpolate=times_to_interpolate, delta_t=delta_t
         )
         entropyA = areaA / 4.0 * self.parent.entropy_scale
         entropyB = areaB / 4.0 * self.parent.entropy_scale
@@ -765,17 +732,17 @@ class Horizon:
     def common_entropy(
         self,
         times_to_interpolate=None,
+        delta_t=None,
     ):
         """
         Bekenstein-Hawking entropy of the post-merger remnant horizon.
 
         Computed from `common_area` as `area / 4`, then scaled by the
-        parent simulation's `entropy_scale` (e.g. to convert to units of
-        `k_B` in `"SI"` units).
+        parent's `entropy_scale`.
 
         Parameters
         ----------
-        times_to_interpolate : ndarray, optional
+        times_to_interpolate, delta_t
             Forwarded to `common_area`.
 
         Returns
@@ -785,7 +752,9 @@ class Horizon:
         entropyC : ndarray
             Entropy of the remnant horizon.
         """
-        time, areaC = self.common_area(times_to_interpolate=times_to_interpolate)
+        time, areaC = self.common_area(
+            times_to_interpolate=times_to_interpolate, delta_t=delta_t
+        )
         entropyC = areaC / 4.0 * self.parent.entropy_scale
         return time, entropyC
 
@@ -797,19 +766,16 @@ class Horizon:
         """
         Dimensionless spin magnitude of each initial black hole over time.
 
-        Taken from the horizon's inertial-frame spin vector magnitude
-        (`chi_inertial_mag`), which is already dimensionless and so is not
-        rescaled, only the time axis is scaled by the parent simulation's
-        `time_scale`.
+        Taken from `chi_inertial_mag` (dimensionless, not rescaled); only
+        time is scaled, by the parent's `time_scale`.
 
         Parameters
         ----------
         times_to_interpolate : ndarray, optional
-            Times at which to interpolate both spins. If given, `delta_t`
-            is ignored.
+            Times (parent's unit system). If given, `delta_t` is ignored.
         delta_t : float, optional
-            Uniform time spacing to resample onto when
-            `times_to_interpolate` is not given.
+            Uniform time spacing (parent's unit system). If None, the coarsest native
+            time step is used.
 
         Returns
         -------
@@ -818,36 +784,22 @@ class Horizon:
         chiA, chiB : ndarray
             Dimensionless spin magnitude of black holes A and B.
         """
-        chiA = self.horizons.A.chi_inertial_mag
-        chiB = self.horizons.B.chi_inertial_mag
-        source_time = self.horizons.A.time
-
-        if times_to_interpolate is not None:
-            time_grid, chiA = match_time_grid(source_time, chiA, times_to_interpolate)
-            _, chiB = match_time_grid(source_time, chiB, times_to_interpolate)
-        else:
-            time_grid, chiA = resample(source_time, chiA, delta_t=delta_t)
-            _, chiB = resample(source_time, chiB, delta_t=delta_t)
-
-        return time_grid * self.parent.time_scale, chiA, chiB
+        return self._pair("chi_inertial_mag", times_to_interpolate, delta_t, True)
 
     def common_chi(self, times_to_interpolate=None, delta_t=None):
         """
         Dimensionless spin magnitude of the post-merger remnant over time.
 
-        Taken from the horizon's inertial-frame spin vector magnitude
-        (`chi_inertial_mag`), which is already dimensionless and so is not
-        rescaled, only the time axis is scaled by the parent simulation's
-        `time_scale`.
+        Taken from `chi_inertial_mag` (dimensionless, not rescaled); only
+        time is scaled, by the parent's `time_scale`.
 
         Parameters
         ----------
         times_to_interpolate : ndarray, optional
-            Times at which to interpolate the spin. If given, `delta_t` is
-            ignored.
+            Times (parent's unit system). If given, `delta_t` is ignored.
         delta_t : float, optional
-            Uniform time spacing to resample onto when
-            `times_to_interpolate` is not given.
+            Uniform time spacing (parent's unit system). If None, the coarsest native
+            time step is used.
 
         Returns
         -------
@@ -856,17 +808,7 @@ class Horizon:
         chiC : ndarray
             Dimensionless spin magnitude of the remnant.
         """
-        chiC = self.horizons.C.chi_inertial_mag
-        source_time = self.horizons.C.time
-
-        time_grid = source_time.copy()
-
-        if times_to_interpolate is not None:
-            time_grid, chiC = match_time_grid(source_time, chiC, times_to_interpolate)
-        else:
-            time_grid, chiC = resample(time_grid, chiC, delta_t=delta_t)
-
-        return time_grid * self.parent.time_scale, chiC
+        return self._single("chi_inertial_mag", times_to_interpolate, delta_t, True)
 
 
 class SXSSimulation:
@@ -1021,7 +963,7 @@ class SXSSimulation:
 
     @property
     def remnant_chi(self):
-        return self.metadata.remnant_dimensionless_spin
+        return float(np.linalg.norm(self.metadata.remnant_dimensionless_spin))
 
     def _resolve_time(self, cutoff, peak_time=None):
         """
@@ -1035,7 +977,7 @@ class SXSSimulation:
             float/int -> explicit time
         """
         last_wf_time = self.waveform_modes.t[-1] * self.time_scale
-        last_horizon_time = self.horizon.end_time * self.time_scale
+        last_horizon_time = self.horizon.end_time
         last_common_time = min(last_wf_time, last_horizon_time)
 
         if cutoff is None:
@@ -1068,6 +1010,7 @@ class SXSSimulation:
         mode=(2, 2),
         delta_t=None,
         sampling="coarse",
+        peak_mode=None,
     ):
         """
         Get the resampled complex waveform mode h_lm.
@@ -1085,6 +1028,11 @@ class SXSSimulation:
             If `delta_t` is not provided, use either the coarsest or
             finest native time spacing.
 
+        peak_mode : tuple(int, int), optional
+            Mode whose amplitude peak defines the `"peak_amplitude"` cutoff.
+            Defaults to `mode` itself. Pass the same value for every mode
+            when summing over modes so they share one time window.
+
         Returns
         -------
         time_resampled : ndarray
@@ -1098,7 +1046,11 @@ class SXSSimulation:
         )
         time = self.waveform_modes.t * self.time_scale
 
-        peak_time = time[np.argmax(np.abs(hlm))]
+        if peak_mode is None or tuple(peak_mode) == tuple(mode):
+            peak_time = time[np.argmax(np.abs(hlm))]
+        else:
+            h_peak = self.waveform_modes[:, self.waveform_modes.index(*peak_mode)]
+            peak_time = time[np.argmax(np.abs(h_peak))]
 
         t0 = self._resolve_time(self.initial_cutoff, peak_time)
         tf = self._resolve_time(self.final_cutoff, peak_time)
@@ -1123,6 +1075,7 @@ class SXSSimulation:
         delta_t=None,
         ell_min=2,
         ell_max=8,
+        peak_mode=(2, 2),
     ):
         """
         Compute the gravitational-wave energy flux from the SXS simulation.
@@ -1142,6 +1095,9 @@ class SXSSimulation:
             `waveform_mode`.
         ell_min, ell_max : int
             Range of `l` values (inclusive) to include in the mode sum.
+        peak_mode : tuple(int, int), default (2, 2)
+            Mode defining the `"peak_amplitude"` cutoff, shared by all modes
+            in the sum so that they have a common time window.
 
         Returns
         -------
@@ -1153,7 +1109,9 @@ class SXSSimulation:
         gw_energy_flux = None
         for ell in range(ell_min, ell_max + 1):
             for em in range(-ell, ell + 1):
-                time, hlm = self.waveform_mode(mode=(ell, em), delta_t=delta_t)
+                time, hlm = self.waveform_mode(
+                    mode=(ell, em), delta_t=delta_t, peak_mode=peak_mode
+                )
                 if gw_energy_flux is None:
                     gw_energy_flux = np.zeros_like(time)
                     t_nr = time.copy()
@@ -1164,11 +1122,17 @@ class SXSSimulation:
 
         gw_energy_flux *= 1.0 / (16.0 * np.pi)
 
-        # hlm and time are already physically scaled by waveform_mode
-        # (strain_scale, time_scale); energy_scale / time_scale converts the
-        # resulting 1/time**2 sum into power in the requested unit system
-        # (a no-op for "NR", and equal to cLight**5 / GNewton for "SI").
-        gw_energy_flux *= self.energy_scale / self.time_scale
+        # hlm and time come scaled from waveform_mode (strain_scale,
+        # time_scale), so the sum above carries strain_scale**2 / time_scale**2.
+        # Undo that to get the dimensionless NR flux, then apply the
+        # NR -> requested-unit factor energy_scale / time_scale (equal to
+        # cLight**5 / GNewton in "SI", and 1 in "NR" and "Geometric").
+        gw_energy_flux *= (
+            self.time_scale**2
+            / self.strain_scale**2
+            * self.energy_scale
+            / self.time_scale
+        )
 
         return t_nr, gw_energy_flux
 
@@ -1177,6 +1141,7 @@ class SXSSimulation:
         delta_t=None,
         ell_min=2,
         ell_max=8,
+        peak_mode=(2, 2),
     ):
         """
         Compute the z-component of the gravitational-wave angular momentum
@@ -1201,6 +1166,9 @@ class SXSSimulation:
             `waveform_mode`.
         ell_min, ell_max : int
             Range of `l` values (inclusive) to include in the mode sum.
+        peak_mode : tuple(int, int), default (2, 2)
+            Mode defining the `"peak_amplitude"` cutoff, shared by all modes
+            in the sum so that they have a common time window.
 
         Returns
         -------
@@ -1213,7 +1181,9 @@ class SXSSimulation:
         gw_angular_momentum_flux = None
         for ell in range(ell_min, ell_max + 1):
             for em in range(-ell, ell + 1):
-                time, hlm = self.waveform_mode(mode=(ell, em), delta_t=delta_t)
+                time, hlm = self.waveform_mode(
+                    mode=(ell, em), delta_t=delta_t, peak_mode=peak_mode
+                )
                 if gw_angular_momentum_flux is None:
                     gw_angular_momentum_flux = np.zeros_like(time)
                     t_nr = time.copy()
@@ -1224,13 +1194,16 @@ class SXSSimulation:
 
         gw_angular_momentum_flux *= 1.0 / (16.0 * np.pi)
 
-        # hlm and time are already physically scaled by waveform_mode
-        # (strain_scale, time_scale); angular_momentum_scale / time_scale
-        # converts the resulting 1/time sum into angular momentum per unit
-        # time in the requested unit system (a no-op for "NR", and exactly
-        # equal to energy_scale, since dJ/dt has the same physical
-        # dimension as energy).
-        gw_angular_momentum_flux *= self.angular_momentum_scale / self.time_scale
+        # hlm and time come scaled from waveform_mode, so the sum above
+        # carries strain_scale**2 / time_scale. Undo that to get the
+        # dimensionless NR flux, then apply the NR -> requested-unit factor
+        # angular_momentum_scale / time_scale.
+        gw_angular_momentum_flux *= (
+            self.time_scale
+            / self.strain_scale**2
+            * self.angular_momentum_scale
+            / self.time_scale
+        )
 
         return t_nr, gw_angular_momentum_flux
 
